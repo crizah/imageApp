@@ -7,6 +7,9 @@ export type AmplifyDependentResourcesAttributes = {
     }
   },
   "auth": {
+    "userPoolGroups": {
+      "messageUsersGroupRole": "string"
+    },
     "webappe9db9f02": {
       "AppClientID": "string",
       "AppClientIDWeb": "string",

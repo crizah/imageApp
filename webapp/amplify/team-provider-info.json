@@ -13,7 +13,8 @@
     },
     "categories": {
       "auth": {
-        "webappe9db9f02": {}
+        "webappe9db9f02": {},
+        "userPoolGroups": {}
       },
       "api": {
         "webapp": {}
