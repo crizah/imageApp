@@ -63,7 +63,7 @@ func SendMsg(sender string, receiver string, fileName string, filePath string, m
 	imageBytes := buf.Bytes()
 
 	// imageBytes, _ := base64.StdEncoding.DecodeString(buf)
-	err, encryptedImage := encryptAES(imageBytes, dataKey)
+	encryptedImage, err := encryptAES(imageBytes, dataKey)
 	if err != nil {
 		return err
 	}
@@ -161,7 +161,7 @@ func getRecipientKmsKey(client *dynamodb.Client, username string) (string, strin
 	return kmsKeyId, snsTopicArn, nil
 }
 
-func encryptAES(data []byte, key []byte) (error, []byte) {
+func encryptAES(data []byte, key []byte) ([]byte, error) {
 	// Implement AES-256-GCM encryption
 	// ... encryption logic ...
 
@@ -171,23 +171,23 @@ func encryptAES(data []byte, key []byte) (error, []byte) {
 	var result []byte
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return err, result
+		return result, err
 	}
 
 	// Never use more than 2^32 random nonces with a given key because of the risk of a repeat.
 	nonce := make([]byte, 12)
 	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return err, result
+		return result, err
 	}
 
 	aesgcm, err := cipher.NewGCM(block)
 	if err != nil {
-		return err, result
+		return result, err
 	}
 
 	ciphertext := aesgcm.Seal(nil, nonce, data, nil)
 	res := append(nonce, ciphertext...)
 
-	return nil, res
+	return res, nil
 
 }

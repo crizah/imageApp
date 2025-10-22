@@ -55,7 +55,7 @@ func Decryption(s3Key string, receiver string, encKey string) ([]byte, error) {
 	dataKey := decKey.Plaintext
 
 	// decrypt image from datakey
-	err, decImage_bytes := decryptAES(enImage_bytes, dataKey)
+	decImage_bytes, err := decryptAES(enImage_bytes, dataKey)
 
 	return decImage_bytes, err
 
@@ -77,21 +77,21 @@ func decryptKMS(cfg aws.Config, kmsKey string, dataKey string) (*kms.DecryptOutp
 
 }
 
-func decryptAES(data []byte, key []byte) (error, []byte) {
+func decryptAES(data []byte, key []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	aesgcm, err := cipher.NewGCM(block)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	// Extract nonce from beginning
 	nonceSize := aesgcm.NonceSize()
 	if len(data) < nonceSize {
-		return fmt.Errorf("ciphertext too short"), nil
+		return nil, fmt.Errorf("ciphertext too short")
 	}
 
 	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
@@ -99,8 +99,8 @@ func decryptAES(data []byte, key []byte) (error, []byte) {
 	// Decrypt
 	plaintext, err := aesgcm.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
-	return nil, plaintext
+	return plaintext, nil
 }
