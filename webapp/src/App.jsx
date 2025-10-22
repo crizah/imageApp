@@ -13,34 +13,6 @@ Amplify.configure(awsconfig);
 
 
 
-// CHAT APPLICATION USING WEBSOCKETS + AWS CLOUD SERVICES
-
-// each connection runs of a different go routine
-// url shortner service
-
-
-
-// then microservice system
-// Build 2–3 microservices (e.g., user service, order service, notification service).
-
-// Use gRPC or REST for inter-service communication.
-
-// Containerize each with Docker.
-
-
-
-// Monitoring Dashboard (like mini-Prometheus)
-
-// Collect metrics (CPU usage, memory, etc.) from multiple systems and show them on a dashboard.
-
-// Teaches: Concurrency, networking, JSON APIs, visualization.
-
-
-
-// image blurring system
-
-
-
 
 
 
@@ -429,7 +401,7 @@ function App({ signOut, user }) {
     <Router>
       <Routes>
        
-        {/* <Route path="/" element={<Navigate to={`/`} />} /> */}
+       
 
     
         <Route
@@ -446,7 +418,7 @@ function App({ signOut, user }) {
         />
 
         
-        {/* <Route path="*" element={<Navigate to={`/${username}`} />} /> */}
+     
       </Routes>
     </Router>
   );

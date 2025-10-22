@@ -1,163 +1,106 @@
 package server
 
-// import (
-// 	"context"
+import (
+	"bytes"
+	"context"
+	"crypto/aes"
+	"crypto/cipher"
+	"encoding/base64"
+	"fmt"
+	"io"
 
-// 	"encoding/base64"
+	"github.com/aws/aws-sdk-go-v2/config"
 
-// 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/kms"
+)
 
-// 	"encoding/json"
+func Decryption(s3Key string, receiver string, encKey string) ([]byte, error) {
 
-// 	"github.com/aws/aws-sdk-go-v2/aws"
-// 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
-// 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	s3Image, err := GetfromS3(s3Key)
+	if err != nil {
+		return nil, err
+	}
 
-// 	"net/http"
-// )
+	defer s3Image.Body.Close()
 
-// func getMessagesHandler(w http.ResponseWriter, r *http.Request) {
-// 	w.Header().Set("Access-Control-Allow-Origin", "*")
-// 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-// 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	var buf bytes.Buffer
+	_, err = io.Copy(&buf, s3Image.Body)
+	if err != nil {
+		return nil, err
+	}
+	enImage_bytes := buf.Bytes()
 
-// 	if r.Method == "OPTIONS" {
-// 		return
-// 	}
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion("eu-north-1"))
+	if err != nil {
+		return nil, err
+	}
 
-// 	username := r.URL.Query().Get("username")
-// 	if username == "" {
-// 		http.Error(w, "Missing username parameter", http.StatusBadRequest)
-// 		return
-// 	}
+	client := dynamodb.NewFromConfig(cfg)
 
-// 	cfg, err := config.LoadDefaultConfig(context.TODO(),
-// 		config.WithRegion("eu-north-1"))
-// 	if err != nil {
-// 		http.Error(w, err.Error(), http.StatusInternalServerError)
-// 		return
-// 	}
+	// get receivers kms key from users table
+	kmsKey, _, err := getRecipientKmsKey(client, receiver)
 
-// 	client := dynamodb.NewFromConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
 
-// 	// Query messages where user is the recipient
-// 	result, err := client.Scan(context.TODO(), &dynamodb.ScanInput{
-// 		TableName:        aws.String("Messages"),
-// 		FilterExpression: aws.String("recipient = :username"),
-// 		ExpressionAttributeValues: map[string]types.AttributeValue{
-// 			":username": &types.AttributeValueMemberS{Value: username},
-// 		},
-// 	})
+	// decrypt the dataKey with this kms key
+	decKey, err := decryptKMS(cfg, kmsKey, encKey)
+	if err != nil {
+		return nil, err
+	}
+	dataKey := decKey.Plaintext
 
-// 	if err != nil {
-// 		http.Error(w, "Failed to get messages: "+err.Error(), http.StatusInternalServerError)
-// 		return
-// 	}
+	// decrypt image from datakey
+	err, decImage_bytes := decryptAES(enImage_bytes, dataKey)
 
-// 	// Convert to JSON-friendly format
-// 	messages := []map[string]string{}
-// 	for _, item := range result.Items {
-// 		msg := map[string]string{
-// 			"messageID": item["messageID"].(*types.AttributeValueMemberS).Value,
-// 			"sender":    item["sender"].(*types.AttributeValueMemberS).Value,
-// 			"fileName":  item["fileName"].(*types.AttributeValueMemberS).Value,
-// 			"status":    item["status"].(*types.AttributeValueMemberS).Value,
-// 		}
-// 		if timestamp, ok := item["timestamp"]; ok && timestamp != nil {
-// 			msg["timestamp"] = timestamp.(*types.AttributeValueMemberS).Value
-// 		}
-// 		messages = append(messages, msg)
-// 	}
+	return decImage_bytes, err
 
-// 	w.Header().Set("Content-Type", "application/json")
-// 	json.NewEncoder(w).Encode(map[string]interface{}{
-// 		"messages": messages,
-// 	})
-// }
+}
 
-// Get and decrypt a specific message
-// func GetMessageHandler(w http.ResponseWriter, r *http.Request) {
-// 	w.Header().Set("Access-Control-Allow-Origin", "*")
-// 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-// 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+func decryptKMS(cfg aws.Config, kmsKey string, dataKey string) (*kms.DecryptOutput, error) {
+	kmsClient := kms.NewFromConfig(cfg)
+	dataKey_bytes, err := base64.StdEncoding.DecodeString(dataKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode encrypted data key: %w", err)
+	}
 
-// 	if r.Method == "OPTIONS" {
-// 		return
-// 	}
+	result, err := kmsClient.Decrypt(context.TODO(), &kms.DecryptInput{
+		KeyId:          aws.String(kmsKey),
+		CiphertextBlob: dataKey_bytes,
+	})
 
-// 	messageID := r.URL.Query().Get("messageID")
-// 	username := r.URL.Query().Get("username")
+	return result, err
 
-// 	if messageID == "" || username == "" {
-// 		http.Error(w, "Missing messageID or username", http.StatusBadRequest)
-// 		return
-// 	}
+}
 
-// 	cfg, err := config.LoadDefaultConfig(context.TODO(),
-// 		config.WithRegion("eu-north-1"))
-// 	if err != nil {
-// 		http.Error(w, err.Error(), http.StatusInternalServerError)
-// 		return
-// 	}
+func decryptAES(data []byte, key []byte) (error, []byte) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return err, nil
+	}
 
-// 	// Get message metadata from DynamoDB
-// 	dynamoClient := dynamodb.NewFromConfig(cfg)
-// 	result, err := dynamoClient.GetItem(context.TODO(), &dynamodb.GetItemInput{
-// 		TableName: aws.String("Messages"),
-// 		Key: map[string]types.AttributeValue{
-// 			"messageID": &types.AttributeValueMemberS{Value: messageID},
-// 		},
-// 	})
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return err, nil
+	}
 
-// 	if err != nil {
-// 		http.Error(w, "Failed to get message: "+err.Error(), http.StatusInternalServerError)
-// 		return
-// 	}
+	// Extract nonce from beginning
+	nonceSize := aesgcm.NonceSize()
+	if len(data) < nonceSize {
+		return fmt.Errorf("ciphertext too short"), nil
+	}
 
-// 	if result.Item == nil {
-// 		http.Error(w, "Message not found", http.StatusNotFound)
-// 		return
-// 	}
+	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
 
-// 	// Verify user is the recipient
-// 	recipient := result.Item["recipient"].(*types.AttributeValueMemberS).Value
-// 	if recipient != username {
-// 		http.Error(w, "Unauthorized", http.StatusForbidden)
-// 		return
-// 	}
+	// Decrypt
+	plaintext, err := aesgcm.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return err, nil
+	}
 
-// 	sender := result.Item["sender"].(*types.AttributeValueMemberS).Value
-// 	s3Key := result.Item["s3Key"].(*types.AttributeValueMemberS).Value
-// 	encryptedDataKey := result.Item["encryptedDataKey"].(*types.AttributeValueMemberS).Value
-// 	fileName := result.Item["fileName"].(*types.AttributeValueMemberS).Value
-
-// 	// Decrypt and return image
-// 	imageData, err := DecryptMsg(username, s3Key, encryptedDataKey, cfg)
-// 	if err != nil {
-// 		http.Error(w, "Failed to decrypt message: "+err.Error(), http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	// Mark as read
-// 	dynamoClient.UpdateItem(context.TODO(), &dynamodb.UpdateItemInput{
-// 		TableName: aws.String("Messages"),
-// 		Key: map[string]types.AttributeValue{
-// 			"messageID": &types.AttributeValueMemberS{Value: messageID},
-// 		},
-// 		UpdateExpression: aws.String("SET #status = :read"),
-// 		ExpressionAttributeNames: map[string]string{
-// 			"#status": "status",
-// 		},
-// 		ExpressionAttributeValues: map[string]types.AttributeValue{
-// 			":read": &types.AttributeValueMemberS{Value: "read"},
-// 		},
-// 	})
-
-// 	// Return image data
-// 	w.Header().Set("Content-Type", "application/json")
-// 	json.NewEncoder(w).Encode(map[string]interface{}{
-// 		"sender":    sender,
-// 		"fileName":  fileName,
-// 		"imageData": base64.StdEncoding.EncodeToString(imageData),
-// 	})
-// }
+	return nil, plaintext
+}

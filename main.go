@@ -9,36 +9,32 @@ import (
 	"os"
 )
 
-var SENDER string
-var RECEIVER string
-var MSGID string
+// func getHandler(w http.ResponseWriter, r *http.Request) {
 
-func getHandler(w http.ResponseWriter, r *http.Request) {
+// 	w.Header().Set("Access-Control-Allow-Origin", "*")
+// 	w.Header().Set("Access-Control-Allow-Methods", "GET , OPTIONS")
+// 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET , OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+// 	if r.Method == "OPTIONS" {
+// 		return
+// 	}
 
-	if r.Method == "OPTIONS" {
-		return
-	}
+// 	err := r.ParseMultipartForm(10 << 20)
+// 	if err != nil {
+// 		http.Error(w, err.Error(), http.StatusBadRequest)
+// 		return
+// 	}
 
-	err := r.ParseMultipartForm(10 << 20)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+// 	msgID := r.FormValue("messageID")
+// 	username := r.FormValue("username")
+// 	if username == "" || msgID == "" {
+// 		http.Error(w, "got no username or msgID", http.StatusBadRequest)
+// 		return
+// 	}
 
-	msgID := r.FormValue("messageID")
-	username := r.FormValue("username")
-	if username == "" || msgID == "" {
-		http.Error(w, "got no username or msgID", http.StatusBadRequest)
-		return
-	}
+// 	fmt.Fprintf(w, "Notification sent for %s (%s)", username, msgID)
 
-	fmt.Fprintf(w, "Notification sent for %s (%s)", username, msgID)
-
-}
+// }
 
 type MsgRequest struct {
 	MessageID string `json:"messageID"`
@@ -67,7 +63,7 @@ func notificationHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var receiver struct {
-		Username string `json:"username"` // or whatever key you're sending
+		Username string `json:"username"`
 	}
 
 	err := json.NewDecoder(r.Body).Decode(&receiver)
@@ -140,9 +136,9 @@ func notificationHandler(w http.ResponseWriter, r *http.Request) {
 
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	// w.Header().Set("Access-Control-Allow-Origin", "*")
+	// w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	// w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
 	if r.Method == "OPTIONS" {
 		return
@@ -167,9 +163,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	recipient := r.FormValue("recipient")
 	sender := r.FormValue("sender")
 	msgID := r.FormValue("msgID")
-	SENDER = sender
-	RECEIVER = recipient
-	MSGID = msgID
+
 	fmt.Printf("Received file: %s for recipient: %s by sender: %s\n", header.Filename, recipient, sender)
 
 	// Save file temporarily
@@ -189,9 +183,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// works till here
-
-	err = server.EncryptMsg(sender, recipient, header.Filename, filepath, msgID)
+	err = server.SendMsg(sender, recipient, header.Filename, filepath, msgID)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -203,10 +195,6 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 		// Don't fail the request if cleanup fails
 	}
 
-	// send notification to the receiver on the app itself
-	// such that when they log into their account, and clicke messages, they can see who al sent them msgs
-
-	// Return success response to client
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -216,7 +204,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 
-	http.HandleFunc("/upload", uploadHandler)
+	http.HandleFunc("/upload", withCORS(uploadHandler))
 	http.HandleFunc("/messages", withCORS(notificationHandler))
 	fmt.Println("Server starting on :8080")
 	http.ListenAndServe(":8080", nil)

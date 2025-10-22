@@ -23,19 +23,6 @@ func UploadToS3(body []byte, key string) error {
 	client := s3.NewFromConfig(cfg)
 	bucket := "non-encrypted-files"
 
-	// file, err := os.Open(filePath)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// defer file.Close()
-
-	// var buf bytes.Buffer
-	// if _, err := io.Copy(&buf, file); err != nil {
-
-	// 	return err
-	// }
-
 	_, err = client.PutObject(context.Background(), &s3.PutObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
