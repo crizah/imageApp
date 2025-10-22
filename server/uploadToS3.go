@@ -64,3 +64,22 @@ func DeletFromS3(key string) error {
 	return err
 
 }
+
+func GetfromS3(key string) (*s3.GetObjectOutput, error) {
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion("eu-north-1"))
+	if err != nil {
+		return nil, err
+	}
+
+	client := s3.NewFromConfig(cfg)
+	bucket := "non-encrypted-files"
+
+	result, err := client.GetObject(context.TODO(), &s3.GetObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	})
+
+	return result, err
+
+}

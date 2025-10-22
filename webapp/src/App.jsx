@@ -4,29 +4,238 @@ import { Amplify } from 'aws-amplify';
 import { withAuthenticator, Button, Heading } from '@aws-amplify/ui-react';
 import awsconfig from './aws-exports';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
-
+import {v4 as uuidv4} from 'uuid';
 
 import axios from "axios";
 
 Amplify.configure(awsconfig);
 
 
-function Send(userA, userB, attatchment, bucket_name){
-
-  
-  // trigger lamda function 
-
-  // get key from KMS
-  
-// encrypts attatchment
-
-  // send encrypted to  s3
 
 
-  // send metadata to dynamoDb  (userA, encrypted, key(get from KMS, allowed access), allowed recipients (add B)) (search with key, if already exists, update allowed recipents, else make the entrtry)
+// CHAT APPLICATION USING WEBSOCKETS + AWS CLOUD SERVICES
+
+// each connection runs of a different go routine
+// url shortner service
 
 
+
+// then microservice system
+// Build 2–3 microservices (e.g., user service, order service, notification service).
+
+// Use gRPC or REST for inter-service communication.
+
+// Containerize each with Docker.
+
+
+
+// Monitoring Dashboard (like mini-Prometheus)
+
+// Collect metrics (CPU usage, memory, etc.) from multiple systems and show them on a dashboard.
+
+// Teaches: Concurrency, networking, JSON APIs, visualization.
+
+
+
+// image blurring system
+
+
+
+
+
+
+
+// function Messages() {
+//   const [messages, setMessages] = useState([]);
+//   const [loading, setLoading] = useState(true);
+//   const [selectedMessage, setSelectedMessage] = useState(null);
+//   const [imageData, setImageData] = useState(null);
+//   const [username, setUsername] = useState('');
+
+//   useEffect(() => {
+//     fetchMessages();
+//   }, []);
+
+//   async function fetchMessages() {
+//     try {
+//       const user = await Auth.currentAuthenticatedUser();
+//       const currentUsername = user.username;
+//       setUsername(currentUsername);
+
+//       const response = await axios.get(
+//         `http://localhost:8080/messages?username=${currentUsername}`
+//       );
+
+//       setMessages(response.data.messages || []);
+//       setLoading(false);
+//     } catch (err) {
+//       console.error('Error fetching messages:', err);
+//       setLoading(false);
+//     }
+//   }
+
+//   async function viewMessage(messageID) {
+//     try {
+//       setSelectedMessage(messageID);
+//       setImageData(null);
+
+//       const response = await axios.get(
+//         `http://localhost:8080/message?messageID=${messageID}&username=${username}`
+//       );
+
+//       setImageData(response.data);
+//     } catch (err) {
+//       console.error('Error viewing message:', err);
+//       alert('Failed to load message: ' + err.message);
+//     }
+//   }
+
+//   function closeMessage() {
+//     setSelectedMessage(null);
+//     setImageData(null);
+//     // Refresh messages to update read status
+//     fetchMessages();
+//   }
+
+//   if (loading) {
+//     return <div>Loading messages...</div>;
+//   }
+
+//   return (
+//     <div style={{ padding: '20px' }}>
+//       <h1>Your Messages</h1>
+
+//       {messages.length === 0 ? (
+//         <p>No messages yet.</p>
+//       ) : (
+//         <div>
+//           {messages.map((msg) => (
+//             <div
+//               key={msg.messageID}
+//               onClick={() => viewMessage(msg.messageID)}
+//               style={{
+//                 border: '1px solid #ccc',
+//                 padding: '15px',
+//                 margin: '10px 0',
+//                 cursor: 'pointer',
+//                 backgroundColor: msg.status === 'unread' ? '#e3f2fd' : '#fff',
+//                 borderRadius: '5px',
+//               }}
+//             >
+//               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+//                 <div>
+//                   <strong>From: {msg.sender}</strong>
+//                   <p style={{ margin: '5px 0', color: '#666' }}>
+//                     File: {msg.fileName}
+//                   </p>
+//                   {msg.timestamp && (
+//                     <p style={{ margin: '5px 0', fontSize: '12px', color: '#999' }}>
+//                       {new Date(msg.timestamp).toLocaleString()}
+//                     </p>
+//                   )}
+//                 </div>
+//                 {msg.status === 'unread' && (
+//                   <span
+//                     style={{
+//                       backgroundColor: '#2196F3',
+//                       color: 'white',
+//                       padding: '5px 10px',
+//                       borderRadius: '12px',
+//                       fontSize: '12px',
+//                       height: 'fit-content',
+//                     }}
+//                   >
+//                     NEW
+//                   </span>
+//                 )}
+//               </div>
+//             </div>
+//           ))}
+//         </div>
+//       )}
+
+//       {/* Message Viewer Modal */}
+//       {selectedMessage && (
+//         <div
+//           style={{
+//             position: 'fixed',
+//             top: 0,
+//             left: 0,
+//             right: 0,
+//             bottom: 0,
+//             backgroundColor: 'rgba(0,0,0,0.8)',
+//             display: 'flex',
+//             alignItems: 'center',
+//             justifyContent: 'center',
+//             zIndex: 1000,
+//           }}
+//           onClick={closeMessage}
+//         >
+//           <div
+//             style={{
+//               backgroundColor: 'white',
+//               padding: '20px',
+//               borderRadius: '10px',
+//               maxWidth: '90%',
+//               maxHeight: '90%',
+//               overflow: 'auto',
+//             }}
+//             onClick={(e) => e.stopPropagation()}
+//           >
+//             {imageData ? (
+//               <div>
+//                 <h2>From: {imageData.sender}</h2>
+//                 <p>File: {imageData.fileName}</p>
+//                 <img
+//                   src={`data:image/jpeg;base64,${imageData.imageData}`}
+//                   alt="Message"
+//                   style={{ maxWidth: '100%', marginTop: '20px' }}
+//                 />
+//                 <button
+//                   onClick={closeMessage}
+//                   style={{
+//                     marginTop: '20px',
+//                     padding: '10px 20px',
+//                     cursor: 'pointer',
+//                   }}
+//                 >
+//                   Close
+//                 </button>
+//               </div>
+//             ) : (
+//               <p>Loading image...</p>
+//             )}
+//           </div>
+//         </div>
+//       )}
+//     </div>
+//   );
+// }
+
+
+
+function Messages({ receiver }) {
+  const fetchMSG = async () => {
+    try {
+      const res = await axios.post("http://localhost:8080/messages", {
+        username: receiver,  
+      });
+
+      const count = res.data.count;
+      alert(`You have ${count} unread messages.`);
+    } catch (error) {
+      alert("Error while getting messages: " + error.message);
+    }
+  };
+
+  return (
+    <div>
+      <button onClick={fetchMSG}>Get Notification</button>
+    </div>
+  );
 }
+
+
 
 
 
@@ -95,12 +304,19 @@ function SendMsg({username}) {
 
   setUploading(true);
 
+
+
+
+
+  
+
   try {
     const formData = new FormData();
+    const msgID = uuidv4();
     formData.append('file', file);  // Send actual file
     formData.append('recipient', selectedUser);
     formData.append('sender', username);
-
+    formData.append('msgID', msgID)
     const res = await axios.post(
       'http://localhost:8080/upload',
       formData,
@@ -111,15 +327,24 @@ function SendMsg({username}) {
       }
     );
 
+
+
+
     alert("Message sent successfully!");
-    // Reset form...
+
+
+
+
+    console.log("Notification message sent");
+   
   } catch (error) {
     alert("Error: " + error.message);
   } finally {
     setUploading(false);
   }
-}
 
+  
+}
 
 
 
@@ -177,41 +402,51 @@ function SendMsg({username}) {
 
 
 
+function HomePage({ signOut, user }) {
+  const navigate = useNavigate();
 
-function HomePage({ signOut, user }) { 
-  const navigate = useNavigate(); 
-  // const hasSaved = React.useRef(false);
+  if (!user) return <div>Loading...</div>;
 
-  // React.useEffect(() => {
-  //   if (user && !hasSaved.current) { 
-  //     const username = user?.username;
-  //     const userId = user?.userId;
-  //     // const email = user?.attributes?.email || user?.email;
-  //     if (username && userId) {
-  //       saveUser(username, userId);
-  //       hasSaved.current = true; // mark as saved for this session
-  //     }
-      
-  //   }
-  // }, [user]);
+  const username = user.username;
 
-  return ( 
-    <div> 
-      <h1>Signed in as {user?.username}</h1> 
-      <button onClick={() => navigate('/sendmsg')}>Send Message</button> 
-      <button onClick={signOut}>Sign Out</button> 
-    </div> 
-  ); 
+  return (
+    <div>
+      <h1>Signed in as {username}</h1>
+      <button onClick={() => navigate(`/sendmsg`)}>Send Message</button>
+      <button onClick={() => navigate(`/messages`)}>Messages</button>
+      <button onClick={signOut}>Sign Out</button>
+    </div>
+  );
 }
 
 
 function App({ signOut, user }) {
-  console.log('Full user object:', user);
+  if (!user) return <div>Loading...</div>;
+
+  const username = user.username;
+
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<HomePage signOut={signOut} user={user} />} />
-        <Route path="/sendmsg" element={<SendMsg username= {user?.username}/>} />
+       
+        {/* <Route path="/" element={<Navigate to={`/`} />} /> */}
+
+    
+        <Route
+          path={`/`}
+          element={<HomePage signOut={signOut} user={user} />}
+        />
+        <Route
+          path={`/sendmsg`}
+          element={<SendMsg username={username} />}
+        />
+        <Route
+          path={`/messages`}
+          element={<Messages receiver={username}/>}
+        />
+
+        
+        {/* <Route path="*" element={<Navigate to={`/${username}`} />} /> */}
       </Routes>
     </Router>
   );

@@ -7,13 +7,13 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/google/uuid"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
@@ -29,7 +29,7 @@ type SendMessageRequest struct {
 	ImageData string `json:"imageData"` // base64 encoded
 }
 
-func EncryptMsg(sender string, receiver string, fileName string, filePath string) error {
+func EncryptMsg(sender string, receiver string, fileName string, filePath string, msgID string) error {
 
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithRegion("eu-north-1"))
@@ -86,7 +86,7 @@ func EncryptMsg(sender string, receiver string, fileName string, filePath string
 	}
 
 	// store message metadata in DynamoDB
-	err = putIntoMessagesTable(sender, receiver, s3Key, fileName, encryptedDK, client)
+	err = putIntoMessagesTable(sender, receiver, s3Key, fileName, encryptedDK, client, msgID)
 	if err != nil {
 		// if error, delete from S3
 		err = DeletFromS3(s3Key)
@@ -99,7 +99,55 @@ func EncryptMsg(sender string, receiver string, fileName string, filePath string
 
 	// 7. Send SNS notification to recipient
 	err = sendSNS(cfg, sender, snsTopicARN)
+
+	// send notification to frontend of the receiver
+
 	return err
+
+}
+
+func Decryption(s3Key string, receiver string, encKey string) ([]byte, error) {
+
+	s3Image, err := GetfromS3(s3Key)
+	if err != nil {
+		return nil, err
+	}
+
+	defer s3Image.Body.Close()
+
+	var buf bytes.Buffer
+	_, err = io.Copy(&buf, s3Image.Body)
+	if err != nil {
+		return nil, err
+	}
+	enImage_bytes := buf.Bytes()
+
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion("eu-north-1"))
+	if err != nil {
+		return nil, err
+	}
+
+	client := dynamodb.NewFromConfig(cfg)
+
+	// get receivers kms key from users table
+	kmsKey, _, err := getRecipientKmsKey(client, receiver)
+
+	if err != nil {
+		return nil, err
+	}
+
+	// decrypt the dataKey with this kms key
+	decKey, err := decryptKMS(cfg, kmsKey, encKey)
+	if err != nil {
+		return nil, err
+	}
+	dataKey := decKey.Plaintext
+
+	// decrypt image from datakey
+	err, decImage_bytes := decryptAES(enImage_bytes, dataKey)
+
+	return decImage_bytes, err
 
 }
 
@@ -114,6 +162,81 @@ func sendSNS(cfg aws.Config, sender string, snsTopicARN string) error {
 	})
 
 	return err
+
+}
+
+func QueryForCount(receiver string) (int, error) {
+
+	// error here
+	// operation error DynamoDB: Query, https response error StatusCode: 400,
+	// RequestID: 086KU10HEDTFK77H5L3JGT05T7VV4KQNSO5AEMVJF66Q9ASUAAJG,
+	// api error ValidationException: Either the KeyConditions
+	// or KeyConditionExpression parameter must be specified in the request.
+
+	count := 0
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion("eu-north-1"))
+	if err != nil {
+		return count, err
+	}
+
+	client := dynamodb.NewFromConfig(cfg)
+	result, err := client.Query(context.TODO(), &dynamodb.QueryInput{
+		TableName:              aws.String("Messages"),
+		IndexName:              aws.String("recipient-index"),
+		KeyConditionExpression: aws.String("recipient = :r"), // Only partition key here
+		FilterExpression:       aws.String("#s = :s"),        // Status goes in filter
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":r": &types.AttributeValueMemberS{Value: receiver},
+			":s": &types.AttributeValueMemberS{Value: "unread"},
+		},
+		ExpressionAttributeNames: map[string]string{
+			"#s": "status",
+		},
+	})
+
+	if err != nil {
+		return count, err
+	}
+
+	count = int(result.Count)
+	return count, nil
+
+}
+
+func GetFromDynamo(receiver string, msgID string) (*dynamodb.GetItemOutput, error) {
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion("eu-north-1"))
+	if err != nil {
+		return nil, err
+	}
+
+	client := dynamodb.NewFromConfig(cfg)
+
+	// query messages to get msgID
+
+	result, err := client.GetItem(context.TODO(), &dynamodb.GetItemInput{
+		TableName: aws.String("Messages"),
+		Key: map[string]types.AttributeValue{
+			"messageID": &types.AttributeValueMemberS{Value: msgID},
+		},
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	// verify if the recipient of the msg is the username provided
+
+	assumed := result.Item["recipient"]
+	sa := assumed.(*types.AttributeValueMemberS).Value
+
+	if sa != receiver {
+		return nil, errors.New("receiver provided didnt match with the database. unauthorized")
+
+	}
+
+	return result, nil
 
 }
 
@@ -134,14 +257,14 @@ func encryptDataKey(cfg aws.Config, recKey string, dataKey []byte) (string, erro
 
 }
 
-func putIntoMessagesTable(s string, r string, key string, f string, dk string, client *dynamodb.Client) error {
+func putIntoMessagesTable(s string, r string, key string, f string, dk string, client *dynamodb.Client, msgID string) error {
 
-	messageId := uuid.New()
+	// messageId := uuid.New()
 	timestamp := time.Now().Format(time.RFC3339)
 	_, err := client.PutItem(context.TODO(), &dynamodb.PutItemInput{
 		TableName: aws.String("Messages"),
 		Item: map[string]types.AttributeValue{
-			"messageID":        &types.AttributeValueMemberS{Value: messageId.String()},
+			"messageID":        &types.AttributeValueMemberS{Value: msgID},
 			"sender":           &types.AttributeValueMemberS{Value: s},
 			"recipient":        &types.AttributeValueMemberS{Value: r},
 			"s3Key":            &types.AttributeValueMemberS{Value: key},
@@ -182,6 +305,22 @@ func getRecipientKmsKey(client *dynamodb.Client, username string) (string, strin
 	return kmsKeyId, snsTopicArn, nil
 }
 
+func decryptKMS(cfg aws.Config, kmsKey string, dataKey string) (*kms.DecryptOutput, error) {
+	kmsClient := kms.NewFromConfig(cfg)
+	dataKey_bytes, err := base64.StdEncoding.DecodeString(dataKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode encrypted data key: %w", err)
+	}
+
+	result, err := kmsClient.Decrypt(context.TODO(), &kms.DecryptInput{
+		KeyId:          aws.String(kmsKey),
+		CiphertextBlob: dataKey_bytes,
+	})
+
+	return result, err
+
+}
+
 func encryptAES(data []byte, key []byte) (error, []byte) {
 	// Implement AES-256-GCM encryption
 	// ... encryption logic ...
@@ -212,6 +351,57 @@ func encryptAES(data []byte, key []byte) (error, []byte) {
 	return nil, res
 
 }
+
+// func DecryptMsg(username string, s3Key string, encryptedDataKeyB64 string, cfg aws.Config) ([]byte, error) {
+// 	// Get user's KMS key
+// 	dynamoClient := dynamodb.NewFromConfig(cfg)
+// 	userKmsKey, _, err := getRecipientKmsKey(dynamoClient, username)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to get user KMS key: %w", err)
+// 	}
+
+// 	// Decrypt the data key with user's KMS key
+// 	kmsClient := kms.NewFromConfig(cfg)
+// 	encryptedDataKeyBytes, err := base64.StdEncoding.DecodeString(encryptedDataKeyB64)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to decode encrypted data key: %w", err)
+// 	}
+
+// 	decryptedKeyResult, err := kmsClient.Decrypt(context.TODO(), &kms.DecryptInput{
+// 		KeyId:          aws.String(userKmsKey),
+// 		CiphertextBlob: encryptedDataKeyBytes,
+// 	})
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to decrypt data key: %w", err)
+// 	}
+// 	dataKey := decryptedKeyResult.Plaintext
+
+// 	// Download encrypted image from S3
+// 	s3Client := s3.NewFromConfig(cfg)
+// 	s3Result, err := s3Client.GetObject(context.TODO(), &s3.GetObjectInput{
+// 		Bucket: aws.String("non-encrypted-files"),
+// 		Key:    aws.String(s3Key),
+// 	})
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to download from S3: %w", err)
+// 	}
+// 	defer s3Result.Body.Close()
+
+// 	var buf bytes.Buffer
+// 	_, err = io.Copy(&buf, s3Result.Body)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to read S3 object: %w", err)
+// 	}
+// 	encryptedImageBytes := buf.Bytes()
+
+// 	// Decrypt the image with the data key
+// 	err, decryptedImage := decryptAES(encryptedImageBytes, dataKey)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to decrypt image: %w", err)
+// 	}
+
+// 	return decryptedImage, nil
+// }
 
 func decryptAES(data []byte, key []byte) (error, []byte) {
 	block, err := aes.NewCipher(key)
