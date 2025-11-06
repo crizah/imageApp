@@ -194,11 +194,15 @@ function Messages({ receiver }) {
       });
 
       const count = res.data.count;
-      alert(`You have ${count} unread messages.`);
+      
+      const msgs = res.data.msgs;
+      alert(`got msgs ${count}`);
     } catch (error) {
       alert("Error while getting messages: " + error.message);
     }
   };
+
+  
 
   return (
     <div>

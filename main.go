@@ -9,33 +9,6 @@ import (
 	"os"
 )
 
-// func getHandler(w http.ResponseWriter, r *http.Request) {
-
-// 	w.Header().Set("Access-Control-Allow-Origin", "*")
-// 	w.Header().Set("Access-Control-Allow-Methods", "GET , OPTIONS")
-// 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-// 	if r.Method == "OPTIONS" {
-// 		return
-// 	}
-
-// 	err := r.ParseMultipartForm(10 << 20)
-// 	if err != nil {
-// 		http.Error(w, err.Error(), http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	msgID := r.FormValue("messageID")
-// 	username := r.FormValue("username")
-// 	if username == "" || msgID == "" {
-// 		http.Error(w, "got no username or msgID", http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	fmt.Fprintf(w, "Notification sent for %s (%s)", username, msgID)
-
-// }
-
 type MsgRequest struct {
 	MessageID string `json:"messageID"`
 }
@@ -55,6 +28,7 @@ func withCORS(next http.HandlerFunc) http.HandlerFunc {
 		next(w, r)
 	}
 }
+
 func notificationHandler(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodPost {
@@ -82,57 +56,20 @@ func notificationHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
+	msgs, err := server.QueryForMsgs(receiver.Username)
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]int{"count": count})
+	// json.NewEncoder(w).Encode(map[string][]server.QueryResult{"msgs": msgs})
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"msgs":  msgs,
+		"count": count,
+	})
 
 }
-
-// func notificationHandler(w http.ResponseWriter, r *http.Request) {
-
-// 	var req MsgRequest
-// 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-// 		http.Error(w, "invalid JSON: "+err.Error(), http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	msgID := req.MessageID
-// 	if msgID == "" {
-// 		http.Error(w, "missing messageID", http.StatusBadRequest)
-// 		return
-// 	}
-// 	// update this to also check for status
-
-// 	// when user clicks on msgs
-// 	// query all of receiver + unread to send notifications DYNAMICALLY
-
-// 	result, err := server.GetFromDynamo(RECEIVER, msgID)
-
-// 	if err != nil {
-// 		http.Error(w, "couldnt get message"+err.Error(), http.StatusInternalServerError)
-// 	}
-
-// 	s3Key := result.Item["s3Key"].(*types.AttributeValueMemberS).Value
-// 	encryptedDataKey := result.Item["encryptedDataKey"].(*types.AttributeValueMemberS).Value
-// 	fileName := result.Item["fileName"].(*types.AttributeValueMemberS).Value
-// 	sender := result.Item["sender"].(*types.AttributeValueMemberS).Value
-
-// 	// get decrypted image
-// 	decImage_bytes, err := server.Decryption(s3Key, RECEIVER, encryptedDataKey)
-// 	if err != nil {
-// 		http.Error(w, "decryption error"+err.Error(), http.StatusInternalServerError)
-// 	}
-
-// 	// change status in dynamo table to read
-
-// 	// return image_data
-// 	w.Header().Set("Content-Type", "application/json")
-// 	json.NewEncoder(w).Encode(map[string]interface{}{
-// 		"sender":    sender,
-// 		"fileName":  fileName,
-// 		"imageData": base64.StdEncoding.EncodeToString(decImage_bytes),
-// 	})
-
-// }
 
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
 

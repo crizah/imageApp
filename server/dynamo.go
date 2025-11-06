@@ -70,6 +70,74 @@ func GetFromDynamo(receiver string, msgID string) (*dynamodb.GetItemOutput, erro
 
 }
 
+type QueryResult struct {
+	MessageID   string
+	Receiver    string
+	Sender      string
+	EncryptedDK string
+	S3Key       string
+	FileName    string
+}
+
+func QueryForMsgs(receiver string) ([]QueryResult, error) {
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion("eu-north-1"))
+	if err != nil {
+		return nil, err
+	}
+
+	client := dynamodb.NewFromConfig(cfg)
+	result, err := client.Query(context.TODO(), &dynamodb.QueryInput{
+		TableName:              aws.String("Messages"),
+		IndexName:              aws.String("recipient-index"),
+		KeyConditionExpression: aws.String("recipient = :r"), // Only partition key here
+		FilterExpression:       aws.String("#s = :s"),        // Status goes in filter
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":r": &types.AttributeValueMemberS{Value: receiver},
+			":s": &types.AttributeValueMemberS{Value: "unread"},
+		},
+		ExpressionAttributeNames: map[string]string{
+			"#s": "status",
+		},
+	})
+
+	if err != nil {
+		return nil, err
+
+	}
+
+	if int(result.Count) == 0 {
+		return nil, errors.New("no unread messages")
+	}
+
+	var answer []QueryResult
+
+	for _, item := range result.Items {
+		ans := QueryResult{
+			MessageID:   getString(item["messageID"]),
+			Receiver:    receiver,
+			Sender:      getString(item["sender"]),
+			EncryptedDK: getString(item["encryptedDataKey"]),
+			S3Key:       getString(item["s3Key"]),
+			FileName:    getString(item["fileName"]),
+		}
+		answer = append(answer, ans)
+
+	}
+
+	return answer, nil
+}
+
+func getString(av types.AttributeValue) string {
+	if av == nil {
+		return ""
+	}
+	if v, ok := av.(*types.AttributeValueMemberS); ok {
+		return v.Value
+	}
+	return ""
+}
+
 func QueryForCount(receiver string) (int, error) {
 
 	count := 0
