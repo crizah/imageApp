@@ -17,177 +17,19 @@ Amplify.configure(awsconfig);
 
 
 
-// function Messages() {
-//   const [messages, setMessages] = useState([]);
-//   const [loading, setLoading] = useState(true);
-//   const [selectedMessage, setSelectedMessage] = useState(null);
-//   const [imageData, setImageData] = useState(null);
-//   const [username, setUsername] = useState('');
-
-//   useEffect(() => {
-//     fetchMessages();
-//   }, []);
-
-//   async function fetchMessages() {
-//     try {
-//       const user = await Auth.currentAuthenticatedUser();
-//       const currentUsername = user.username;
-//       setUsername(currentUsername);
-
-//       const response = await axios.get(
-//         `http://localhost:8080/messages?username=${currentUsername}`
-//       );
-
-//       setMessages(response.data.messages || []);
-//       setLoading(false);
-//     } catch (err) {
-//       console.error('Error fetching messages:', err);
-//       setLoading(false);
-//     }
-//   }
-
-//   async function viewMessage(messageID) {
-//     try {
-//       setSelectedMessage(messageID);
-//       setImageData(null);
-
-//       const response = await axios.get(
-//         `http://localhost:8080/message?messageID=${messageID}&username=${username}`
-//       );
-
-//       setImageData(response.data);
-//     } catch (err) {
-//       console.error('Error viewing message:', err);
-//       alert('Failed to load message: ' + err.message);
-//     }
-//   }
-
-//   function closeMessage() {
-//     setSelectedMessage(null);
-//     setImageData(null);
-//     // Refresh messages to update read status
-//     fetchMessages();
-//   }
-
-//   if (loading) {
-//     return <div>Loading messages...</div>;
-//   }
-
-//   return (
-//     <div style={{ padding: '20px' }}>
-//       <h1>Your Messages</h1>
-
-//       {messages.length === 0 ? (
-//         <p>No messages yet.</p>
-//       ) : (
-//         <div>
-//           {messages.map((msg) => (
-//             <div
-//               key={msg.messageID}
-//               onClick={() => viewMessage(msg.messageID)}
-//               style={{
-//                 border: '1px solid #ccc',
-//                 padding: '15px',
-//                 margin: '10px 0',
-//                 cursor: 'pointer',
-//                 backgroundColor: msg.status === 'unread' ? '#e3f2fd' : '#fff',
-//                 borderRadius: '5px',
-//               }}
-//             >
-//               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-//                 <div>
-//                   <strong>From: {msg.sender}</strong>
-//                   <p style={{ margin: '5px 0', color: '#666' }}>
-//                     File: {msg.fileName}
-//                   </p>
-//                   {msg.timestamp && (
-//                     <p style={{ margin: '5px 0', fontSize: '12px', color: '#999' }}>
-//                       {new Date(msg.timestamp).toLocaleString()}
-//                     </p>
-//                   )}
-//                 </div>
-//                 {msg.status === 'unread' && (
-//                   <span
-//                     style={{
-//                       backgroundColor: '#2196F3',
-//                       color: 'white',
-//                       padding: '5px 10px',
-//                       borderRadius: '12px',
-//                       fontSize: '12px',
-//                       height: 'fit-content',
-//                     }}
-//                   >
-//                     NEW
-//                   </span>
-//                 )}
-//               </div>
-//             </div>
-//           ))}
-//         </div>
-//       )}
-
-//       {/* Message Viewer Modal */}
-//       {selectedMessage && (
-//         <div
-//           style={{
-//             position: 'fixed',
-//             top: 0,
-//             left: 0,
-//             right: 0,
-//             bottom: 0,
-//             backgroundColor: 'rgba(0,0,0,0.8)',
-//             display: 'flex',
-//             alignItems: 'center',
-//             justifyContent: 'center',
-//             zIndex: 1000,
-//           }}
-//           onClick={closeMessage}
-//         >
-//           <div
-//             style={{
-//               backgroundColor: 'white',
-//               padding: '20px',
-//               borderRadius: '10px',
-//               maxWidth: '90%',
-//               maxHeight: '90%',
-//               overflow: 'auto',
-//             }}
-//             onClick={(e) => e.stopPropagation()}
-//           >
-//             {imageData ? (
-//               <div>
-//                 <h2>From: {imageData.sender}</h2>
-//                 <p>File: {imageData.fileName}</p>
-//                 <img
-//                   src={`data:image/jpeg;base64,${imageData.imageData}`}
-//                   alt="Message"
-//                   style={{ maxWidth: '100%', marginTop: '20px' }}
-//                 />
-//                 <button
-//                   onClick={closeMessage}
-//                   style={{
-//                     marginTop: '20px',
-//                     padding: '10px 20px',
-//                     cursor: 'pointer',
-//                   }}
-//                 >
-//                   Close
-//                 </button>
-//               </div>
-//             ) : (
-//               <p>Loading image...</p>
-//             )}
-//           </div>
-//         </div>
-//       )}
-//     </div>
-//   );
-// }
 
 
+function Msg(){
+  return (
+    <div>
+      hi
+    </div>
+  )
+}
 
 function Messages({ receiver }) {
   const [senders, setSenders] = useState([]);
+  const navigate = useNavigate();
   const fetchMSG = async () => {
     try {
       const res = await axios.post("http://localhost:8080/messages", {
@@ -231,6 +73,7 @@ return (
         {senders.map((sender) => (
           <button
             key={sender}
+            onClick={() => navigate(`/msg`)}
             
           >
             {sender}
@@ -451,6 +294,11 @@ function App({ signOut, user }) {
           path={`/messages`}
           element={<Messages receiver={username}/>}
         />
+        <Route
+          path = {`/msg`}
+          element = {<Msg/>}
+        />
+
 
         
      
