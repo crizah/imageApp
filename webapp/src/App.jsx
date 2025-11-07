@@ -187,6 +187,7 @@ Amplify.configure(awsconfig);
 
 
 function Messages({ receiver }) {
+  const [senders, setSenders] = useState([]);
   const fetchMSG = async () => {
     try {
       const res = await axios.post("http://localhost:8080/messages", {
@@ -194,8 +195,24 @@ function Messages({ receiver }) {
       });
 
       const count = res.data.count;
-      
-      const msgs = res.data.msgs;
+      const msgs = res.data.msgs; // array of objects
+      // iterate msgs and group them based on sender
+      // map[string][object]
+      const m = new Map();
+      for (const msg of msgs) {
+        if (!m.has(msg.Sender)) {
+          m.set(msg.Sender, [msg]); 
+        } else {
+           m.get(msg.Sender).push(msg); 
+        }
+      }
+
+      setSenders([...m.keys()]);
+
+
+      console.log(m.size);
+      // based on m.size, thats the number of box elements with the text as the sender
+
       alert(`got msgs ${count}`);
     } catch (error) {
       alert("Error while getting messages: " + error.message);
@@ -204,12 +221,26 @@ function Messages({ receiver }) {
 
   
 
-  return (
+return (
     <div>
-      <button onClick={fetchMSG}>Get Notification</button>
+      <button onClick={fetchMSG}>
+        Get Notification
+      </button>
+
+      <div className="senders">
+        {senders.map((sender) => (
+          <button
+            key={sender}
+            
+          >
+            {sender}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
+
 
 
 
