@@ -1,11 +1,15 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
+
+	"net/http"
+
 	"fmt"
 	"imageApp_2/server"
 	"io"
-	"net/http"
+
 	"os"
 )
 
@@ -69,6 +73,52 @@ func notificationHandler(w http.ResponseWriter, r *http.Request) {
 		"count": count,
 	})
 
+}
+
+func fileHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	type Results struct {
+		MessageID   string `json:"messageID"`
+		Receiver    string `json:"receiver"`
+		EncryptedDK string `json:"encryptedDK"`
+		S3Key       string `json:"s3Key"`
+		FileName    string `json:"fileName"`
+	}
+
+	var receiver struct {
+		Msgs []Results `json:"msgs"`
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&receiver)
+	if err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	var base64EncodedFiles []string
+
+	for _, msg := range receiver.Msgs {
+		b1, err := server.Decryption(msg.S3Key, msg.Receiver, msg.EncryptedDK)
+		if err != nil {
+			http.Error(w, "Decryption failed: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// encode the decrypted bytes as base64
+		encoded := base64.StdEncoding.EncodeToString(b1)
+		base64EncodedFiles = append(base64EncodedFiles, encoded)
+	}
+
+	// send response
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string][]string{
+		"files": base64EncodedFiles,
+	})
 }
 
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
@@ -143,6 +193,7 @@ func main() {
 
 	http.HandleFunc("/upload", withCORS(uploadHandler))
 	http.HandleFunc("/messages", withCORS(notificationHandler))
+	http.HandleFunc("/files", withCORS(fileHandler))
 	fmt.Println("Server starting on :8080")
 	http.ListenAndServe(":8080", nil)
 }

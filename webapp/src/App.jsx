@@ -5,6 +5,7 @@ import { withAuthenticator, Button, Heading } from '@aws-amplify/ui-react';
 import awsconfig from './aws-exports';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
 import {v4 as uuidv4} from 'uuid';
+import { useLocation } from "react-router-dom";
 
 import axios from "axios";
 
@@ -19,16 +20,64 @@ Amplify.configure(awsconfig);
 
 
 
-function Msg(){
+function Msg() {
+  const location = useLocation();
+  const { sender, messages } = location.state || {};
+
+  const [images, setImages] = useState([]);
+
+  const getMessages = async () => {
+    try {
+      const res = await axios.post("http://localhost:8080/files", {
+        msgs: messages,
+      });
+
+      //array of base64-encoded image strings
+      const fileData = res.data.files || [];
+
+      // Convert base64 strings to object URLs for <img> display
+      const urls = fileData.map((b64) => {
+        // decode base64 → binary
+        const binary = atob(b64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+
+        const blob = new Blob([bytes], { type: "image/jpeg" }); // adjust MIME type if needed
+        return URL.createObjectURL(blob);
+      });
+
+      setImages(urls);
+    } catch (error) {
+      alert("Error: " + error);
+    }
+  };
+
   return (
     <div>
-      hi
+      <h2>Messages from: {sender}</h2>
+
+      <button onClick={getMessages}>Decrypt & Load Images</button>
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "20px" }}>
+        {images.map((src, index) => (
+          <img
+            key={index}
+            src={src}
+            alt={`Decrypted ${index}`}
+            style={{ width: "200px", borderRadius: "8px", boxShadow: "0 0 8px #aaa" }}
+          />
+        ))}
+      </div>
     </div>
-  )
+  );
 }
+
 
 function Messages({ receiver }) {
   const [senders, setSenders] = useState([]);
+  const [senderMap, setSenderMap] = useState(new Map());
   const navigate = useNavigate();
   const fetchMSG = async () => {
     try {
@@ -50,6 +99,7 @@ function Messages({ receiver }) {
       }
 
       setSenders([...m.keys()]);
+      setSenderMap(m);
 
 
       console.log(m.size);
@@ -72,12 +122,11 @@ return (
       <div className="senders">
         {senders.map((sender) => (
           <button
-            key={sender}
-            onClick={() => navigate(`/msg`)}
-            
-          >
-            {sender}
-          </button>
+  key={sender}
+  onClick={() => navigate("/msg", { state: { sender, messages: senderMap.get(sender) } })}
+>
+  {sender}
+</button>
         ))}
       </div>
     </div>
