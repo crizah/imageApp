@@ -55,6 +55,8 @@ Designed and implemented a **secure, serverless real-time chat application** usi
 - Message metadata, including the **S3 object key and encrypted DEK**, is stored in the **Messages DynamoDB table**.
 - User B receives a **notification email** indicating a new message.
 
+  ![SNS](sns.drawio.png)
+
 #### Message Retrieval
 - User B logs in and requests unread message count.
 - The backend queries the Messages table to determine unread messages.
@@ -63,6 +65,8 @@ Designed and implemented a **secure, serverless real-time chat application** usi
   - **AWS KMS** decrypts the DEK.
   - The message is decrypted using the DEK.
 - The decrypted message is securely delivered to User B.
+
+ ![Message Retrieval](sent.png)
 
 ---
 
