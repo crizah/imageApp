@@ -14,7 +14,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
-	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 )
 
@@ -29,7 +28,7 @@ func (s *Server) SendMsg(sender string, receiver string, fileName string, filePa
 
 	// get the recipients kms key from dynamo Table
 
-	recKey, snsTopicARN, err := s.getRecipientKmsKey(receiver)
+	snsTopicARN, err := s.getRecipientARN(receiver)
 	if err != nil {
 		return err
 	}
@@ -62,14 +61,14 @@ func (s *Server) SendMsg(sender string, receiver string, fileName string, filePa
 
 	// 4. Encrypt the data key with recipient's KMS key
 
-	encryptedDK, err := s.encryptDataKey(recKey, dataKey)
+	encryptedDK, err := s.encryptDataKey(dataKey)
 	if err != nil {
 		return err
 	}
 
 	// upload encrypted image to s3
 	s3Key := fmt.Sprintf("%s/%s/%s", sender, receiver, fileName)
-	err = UploadToS3(encryptedImage, s3Key)
+	err = s.UploadToS3(encryptedImage, s3Key)
 	if err != nil {
 
 		return err
@@ -79,7 +78,7 @@ func (s *Server) SendMsg(sender string, receiver string, fileName string, filePa
 	err = s.putIntoMessagesTable(sender, receiver, s3Key, fileName, encryptedDK, msgID)
 	if err != nil {
 		// if error, delete from S3
-		err = DeletFromS3(s3Key)
+		err = s.DeletFromS3(s3Key)
 		if err != nil {
 			return err
 		}
@@ -110,24 +109,24 @@ func (s *Server) sendSNS(sender string, snsTopicARN string) error {
 
 }
 
-func (s *Server) encryptDataKey(recKey string, dataKey []byte) (string, error) {
+func (s *Server) encryptDataKey(dataKey []byte) (string, error) {
 
-	encryptedDataKeyResult, err := s.kmsClient.Encrypt(context.TODO(), &kms.EncryptInput{
-		KeyId:     aws.String(recKey),
-		Plaintext: dataKey,
-	})
+	// encryptedDataKeyResult, err := s.kmsClient.Encrypt(context.TODO(), &kms.EncryptInput{
+	// 	KeyId:     aws.String(recKey),
+	// 	Plaintext: dataKey,
+	// })
 
-	if err != nil {
-		return "", err
-	}
+	// if err != nil {
+	// 	return "", err
+	// }
 
-	encryptedDataKey := base64.StdEncoding.EncodeToString(encryptedDataKeyResult.CiphertextBlob)
+	encryptedDataKey := base64.StdEncoding.EncodeToString(dataKey)
 
 	return encryptedDataKey, nil
 
 }
 
-func (s *Server) getRecipientKmsKey(username string) (string, string, error) {
+func (s *Server) getRecipientARN(username string) (string, error) {
 
 	//       TableName: "Users",
 	//   Item: {
@@ -145,12 +144,12 @@ func (s *Server) getRecipientKmsKey(username string) (string, string, error) {
 		},
 	})
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 
-	kmsKeyId := result.Item["kmsKeyId"].(*types.AttributeValueMemberS).Value
+	// kmsKeyId := result.Item["kmsKeyId"].(*types.AttributeValueMemberS).Value
 	snsTopicArn := result.Item["snsTopicArn"].(*types.AttributeValueMemberS).Value
-	return kmsKeyId, snsTopicArn, nil
+	return snsTopicArn, nil
 }
 
 func encryptAES(data []byte, key []byte) ([]byte, error) {
