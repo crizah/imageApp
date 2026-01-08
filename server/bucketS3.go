@@ -6,6 +6,7 @@ import (
 	"context"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
@@ -15,9 +16,17 @@ const (
 	BUCKET = "encrypted-files"
 )
 
-func (s *Server) UploadToS3(body []byte, key string) error {
+func UploadToS3(body []byte, key string) error {
 
-	_, err := s.s3Client.PutObject(context.Background(), &s3.PutObjectInput{
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion("eu-east-1"))
+	if err != nil {
+		return err
+	}
+
+	client := s3.NewFromConfig(cfg)
+
+	_, err = client.PutObject(context.Background(), &s3.PutObjectInput{
 		Bucket: aws.String(BUCKET),
 		Key:    aws.String(key),
 		Body:   bytes.NewReader(body),
@@ -27,9 +36,16 @@ func (s *Server) UploadToS3(body []byte, key string) error {
 
 }
 
-func (s *Server) DeletFromS3(key string) error {
+func DeletFromS3(key string) error {
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion("eu-east-1"))
+	if err != nil {
+		return err
+	}
 
-	_, err := s.s3Client.DeleteObject(context.Background(), &s3.DeleteObjectInput{
+	client := s3.NewFromConfig(cfg)
+
+	_, err = client.DeleteObject(context.Background(), &s3.DeleteObjectInput{
 		Bucket: aws.String(BUCKET),
 		Key:    aws.String(key),
 	})
@@ -38,9 +54,16 @@ func (s *Server) DeletFromS3(key string) error {
 
 }
 
-func (s *Server) GetfromS3(key string) (*s3.GetObjectOutput, error) {
+func GetfromS3(key string) (*s3.GetObjectOutput, error) {
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion("eu-east-1"))
+	if err != nil {
+		return nil, err
+	}
 
-	result, err := s.s3Client.GetObject(context.TODO(), &s3.GetObjectInput{
+	client := s3.NewFromConfig(cfg)
+
+	result, err := client.GetObject(context.TODO(), &s3.GetObjectInput{
 		Bucket: aws.String(BUCKET),
 		Key:    aws.String(key),
 	})

@@ -24,4 +24,3 @@ amplifytools.xcconfig
 .terraform/
 terraform.tfstate
 terraform.tfstate.backup
-.env
