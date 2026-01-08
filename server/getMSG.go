@@ -2,20 +2,16 @@ package server
 
 import (
 	"bytes"
-	"context"
 	"crypto/aes"
 	"crypto/cipher"
 	"encoding/base64"
 	"fmt"
 	"io"
-
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/kms"
 )
 
 func (s *Server) Decryption(s3Key string, receiver string, encKey string) ([]byte, error) {
 
-	s3Image, err := GetfromS3(s3Key)
+	s3Image, err := s.GetfromS3(s3Key)
 	if err != nil {
 		return nil, err
 	}
@@ -30,18 +26,15 @@ func (s *Server) Decryption(s3Key string, receiver string, encKey string) ([]byt
 	enImage_bytes := buf.Bytes()
 
 	// get receivers kms key from users table
-	kmsKey, _, err := s.getRecipientKmsKey(receiver)
-
-	if err != nil {
-		return nil, err
-	}
+	// kmsKey, _, err := s.getRecipientKmsKey(receiver)
 
 	// decrypt the dataKey with this kms key
-	decKey, err := s.decryptKMS(kmsKey, encKey)
+	dataKey, err := s.decryptKMS(encKey)
 	if err != nil {
 		return nil, err
 	}
-	dataKey := decKey.Plaintext
+
+	// dataKey := decKey.Plaintext
 
 	// decrypt image from datakey
 	decImage_bytes, err := decryptAES(enImage_bytes, dataKey)
@@ -50,19 +43,19 @@ func (s *Server) Decryption(s3Key string, receiver string, encKey string) ([]byt
 
 }
 
-func (s *Server) decryptKMS(kmsKey string, dataKey string) (*kms.DecryptOutput, error) {
+func (s *Server) decryptKMS(dataKey string) ([]byte, error) {
 
 	dataKey_bytes, err := base64.StdEncoding.DecodeString(dataKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode encrypted data key: %w", err)
-	}
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to decode encrypted data key: %w", err)
+	// }
 
-	result, err := s.kmsClient.Decrypt(context.TODO(), &kms.DecryptInput{
-		KeyId:          aws.String(kmsKey),
-		CiphertextBlob: dataKey_bytes,
-	})
+	// result, err := s.kmsClient.Decrypt(context.TODO(), &kms.DecryptInput{
+	// 	KeyId:          aws.String(kmsKey),
+	// 	CiphertextBlob: dataKey_bytes,
+	// })
 
-	return result, err
+	return dataKey_bytes, err
 
 }
 
