@@ -9,14 +9,11 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/aws/aws-sdk-go-v2/config"
-
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 )
 
-func Decryption(s3Key string, receiver string, encKey string) ([]byte, error) {
+func (s *Server) Decryption(s3Key string, receiver string, encKey string) ([]byte, error) {
 
 	s3Image, err := GetfromS3(s3Key)
 	if err != nil {
@@ -32,23 +29,15 @@ func Decryption(s3Key string, receiver string, encKey string) ([]byte, error) {
 	}
 	enImage_bytes := buf.Bytes()
 
-	cfg, err := config.LoadDefaultConfig(context.TODO(),
-		config.WithRegion("eu-north-1"))
-	if err != nil {
-		return nil, err
-	}
-
-	client := dynamodb.NewFromConfig(cfg)
-
 	// get receivers kms key from users table
-	kmsKey, _, err := getRecipientKmsKey(client, receiver)
+	kmsKey, _, err := s.getRecipientKmsKey(receiver)
 
 	if err != nil {
 		return nil, err
 	}
 
 	// decrypt the dataKey with this kms key
-	decKey, err := decryptKMS(cfg, kmsKey, encKey)
+	decKey, err := s.decryptKMS(kmsKey, encKey)
 	if err != nil {
 		return nil, err
 	}
@@ -61,14 +50,14 @@ func Decryption(s3Key string, receiver string, encKey string) ([]byte, error) {
 
 }
 
-func decryptKMS(cfg aws.Config, kmsKey string, dataKey string) (*kms.DecryptOutput, error) {
-	kmsClient := kms.NewFromConfig(cfg)
+func (s *Server) decryptKMS(kmsKey string, dataKey string) (*kms.DecryptOutput, error) {
+
 	dataKey_bytes, err := base64.StdEncoding.DecodeString(dataKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode encrypted data key: %w", err)
 	}
 
-	result, err := kmsClient.Decrypt(context.TODO(), &kms.DecryptInput{
+	result, err := s.kmsClient.Decrypt(context.TODO(), &kms.DecryptInput{
 		KeyId:          aws.String(kmsKey),
 		CiphertextBlob: dataKey_bytes,
 	})

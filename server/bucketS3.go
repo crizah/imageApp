@@ -12,19 +12,22 @@ import (
 
 // every user generates one key during sign up
 
+const (
+	BUCKET = "encrypted-files"
+)
+
 func UploadToS3(body []byte, key string) error {
 
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
-		config.WithRegion("eu-north-1"))
+		config.WithRegion("eu-east-1"))
 	if err != nil {
 		return err
 	}
 
 	client := s3.NewFromConfig(cfg)
-	bucket := "non-encrypted-files"
 
 	_, err = client.PutObject(context.Background(), &s3.PutObjectInput{
-		Bucket: aws.String(bucket),
+		Bucket: aws.String(BUCKET),
 		Key:    aws.String(key),
 		Body:   bytes.NewReader(body),
 	})
@@ -35,16 +38,15 @@ func UploadToS3(body []byte, key string) error {
 
 func DeletFromS3(key string) error {
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
-		config.WithRegion("eu-north-1"))
+		config.WithRegion("eu-east-1"))
 	if err != nil {
 		return err
 	}
 
 	client := s3.NewFromConfig(cfg)
-	bucket := "non-encrypted-files"
 
 	_, err = client.DeleteObject(context.Background(), &s3.DeleteObjectInput{
-		Bucket: aws.String(bucket),
+		Bucket: aws.String(BUCKET),
 		Key:    aws.String(key),
 	})
 
@@ -54,16 +56,15 @@ func DeletFromS3(key string) error {
 
 func GetfromS3(key string) (*s3.GetObjectOutput, error) {
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
-		config.WithRegion("eu-north-1"))
+		config.WithRegion("eu-east-1"))
 	if err != nil {
 		return nil, err
 	}
 
 	client := s3.NewFromConfig(cfg)
-	bucket := "non-encrypted-files"
 
 	result, err := client.GetObject(context.TODO(), &s3.GetObjectInput{
-		Bucket: aws.String(bucket),
+		Bucket: aws.String(BUCKET),
 		Key:    aws.String(key),
 	})
 

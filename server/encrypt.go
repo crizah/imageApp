@@ -11,8 +11,6 @@ import (
 	"io"
 	"os"
 
-	"github.com/aws/aws-sdk-go-v2/config"
-
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
@@ -27,17 +25,11 @@ type SendMessageRequest struct {
 	ImageData string `json:"imageData"` // base64 encoded
 }
 
-func SendMsg(sender string, receiver string, fileName string, filePath string, msgID string) error {
-
-	cfg, err := config.LoadDefaultConfig(context.TODO(),
-		config.WithRegion("eu-north-1"))
-	if err != nil {
-		return err
-	}
+func (s *Server) SendMsg(sender string, receiver string, fileName string, filePath string, msgID string) error {
 
 	// get the recipients kms key from dynamo Table
-	client := dynamodb.NewFromConfig(cfg)
-	recKey, snsTopicARN, err := getRecipientKmsKey(client, receiver)
+
+	recKey, snsTopicARN, err := s.getRecipientKmsKey(receiver)
 	if err != nil {
 		return err
 	}
@@ -70,7 +62,7 @@ func SendMsg(sender string, receiver string, fileName string, filePath string, m
 
 	// 4. Encrypt the data key with recipient's KMS key
 
-	encryptedDK, err := encryptDataKey(cfg, recKey, dataKey)
+	encryptedDK, err := s.encryptDataKey(recKey, dataKey)
 	if err != nil {
 		return err
 	}
@@ -84,7 +76,7 @@ func SendMsg(sender string, receiver string, fileName string, filePath string, m
 	}
 
 	// store message metadata in DynamoDB
-	err = putIntoMessagesTable(sender, receiver, s3Key, fileName, encryptedDK, client, msgID)
+	err = s.putIntoMessagesTable(sender, receiver, s3Key, fileName, encryptedDK, msgID)
 	if err != nil {
 		// if error, delete from S3
 		err = DeletFromS3(s3Key)
@@ -96,7 +88,7 @@ func SendMsg(sender string, receiver string, fileName string, filePath string, m
 	}
 
 	// 7. Send SNS notification to recipient
-	err = sendSNS(cfg, sender, snsTopicARN)
+	err = s.sendSNS(sender, snsTopicARN)
 
 	// send notification to frontend of the receiver
 
@@ -104,11 +96,11 @@ func SendMsg(sender string, receiver string, fileName string, filePath string, m
 
 }
 
-func sendSNS(cfg aws.Config, sender string, snsTopicARN string) error {
-	snsClient := sns.NewFromConfig(cfg)
+func (s *Server) sendSNS(sender string, snsTopicARN string) error {
+
 	// recipientTopic := fmt.Sprintf("arn:aws:sns:region:account:user-%s-notifications", receiver)
 	// "arn:aws:sns:eu-north-1:YOUR_ACCOUNT_ID:user-%s-notifications"
-	_, err := snsClient.Publish(context.TODO(), &sns.PublishInput{
+	_, err := s.snsClient.Publish(context.TODO(), &sns.PublishInput{
 		TopicArn: aws.String(snsTopicARN),
 		Message:  aws.String(fmt.Sprintf("New message from %s", sender)),
 		Subject:  aws.String("New Message"),
@@ -118,9 +110,9 @@ func sendSNS(cfg aws.Config, sender string, snsTopicARN string) error {
 
 }
 
-func encryptDataKey(cfg aws.Config, recKey string, dataKey []byte) (string, error) {
-	kmsClient := kms.NewFromConfig(cfg)
-	encryptedDataKeyResult, err := kmsClient.Encrypt(context.TODO(), &kms.EncryptInput{
+func (s *Server) encryptDataKey(recKey string, dataKey []byte) (string, error) {
+
+	encryptedDataKeyResult, err := s.kmsClient.Encrypt(context.TODO(), &kms.EncryptInput{
 		KeyId:     aws.String(recKey),
 		Plaintext: dataKey,
 	})
@@ -135,7 +127,7 @@ func encryptDataKey(cfg aws.Config, recKey string, dataKey []byte) (string, erro
 
 }
 
-func getRecipientKmsKey(client *dynamodb.Client, username string) (string, string, error) {
+func (s *Server) getRecipientKmsKey(username string) (string, string, error) {
 
 	//       TableName: "Users",
 	//   Item: {
@@ -146,7 +138,7 @@ func getRecipientKmsKey(client *dynamodb.Client, username string) (string, strin
 	//     createdAt: { S: new Date().toISOString() }
 	//   }
 
-	result, err := client.GetItem(context.TODO(), &dynamodb.GetItemInput{
+	result, err := s.dynamoClient.GetItem(context.TODO(), &dynamodb.GetItemInput{
 		TableName: aws.String("Users"),
 		Key: map[string]types.AttributeValue{
 			"username": &types.AttributeValueMemberS{Value: username},

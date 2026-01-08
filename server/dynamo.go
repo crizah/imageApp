@@ -5,22 +5,20 @@ import (
 	"errors"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/config"
-
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
-func putIntoMessagesTable(s string, r string, key string, f string, dk string, client *dynamodb.Client, msgID string) error {
+func (s *Server) putIntoMessagesTable(str string, r string, key string, f string, dk string, msgID string) error {
 
 	// messageId := uuid.New()
 	timestamp := time.Now().Format(time.RFC3339)
-	_, err := client.PutItem(context.TODO(), &dynamodb.PutItemInput{
+	_, err := s.dynamoClient.PutItem(context.TODO(), &dynamodb.PutItemInput{
 		TableName: aws.String("Messages"),
 		Item: map[string]types.AttributeValue{
 			"messageID":        &types.AttributeValueMemberS{Value: msgID},
-			"sender":           &types.AttributeValueMemberS{Value: s},
+			"sender":           &types.AttributeValueMemberS{Value: str},
 			"recipient":        &types.AttributeValueMemberS{Value: r},
 			"s3Key":            &types.AttributeValueMemberS{Value: key},
 			"timestamp":        &types.AttributeValueMemberS{Value: timestamp},
@@ -34,18 +32,11 @@ func putIntoMessagesTable(s string, r string, key string, f string, dk string, c
 
 }
 
-func GetFromDynamo(receiver string, msgID string) (*dynamodb.GetItemOutput, error) {
-	cfg, err := config.LoadDefaultConfig(context.TODO(),
-		config.WithRegion("eu-north-1"))
-	if err != nil {
-		return nil, err
-	}
-
-	client := dynamodb.NewFromConfig(cfg)
+func (s *Server) GetFromDynamo(receiver string, msgID string) (*dynamodb.GetItemOutput, error) {
 
 	// query messages to get msgID
 
-	result, err := client.GetItem(context.TODO(), &dynamodb.GetItemInput{
+	result, err := s.dynamoClient.GetItem(context.TODO(), &dynamodb.GetItemInput{
 		TableName: aws.String("Messages"),
 		Key: map[string]types.AttributeValue{
 			"messageID": &types.AttributeValueMemberS{Value: msgID},
@@ -79,15 +70,9 @@ type QueryResult struct {
 	FileName    string
 }
 
-func QueryForMsgs(receiver string) ([]QueryResult, error) {
-	cfg, err := config.LoadDefaultConfig(context.TODO(),
-		config.WithRegion("eu-north-1"))
-	if err != nil {
-		return nil, err
-	}
+func (s *Server) QueryForMsgs(receiver string) ([]QueryResult, error) {
 
-	client := dynamodb.NewFromConfig(cfg)
-	result, err := client.Query(context.TODO(), &dynamodb.QueryInput{
+	result, err := s.dynamoClient.Query(context.TODO(), &dynamodb.QueryInput{
 		TableName:              aws.String("Messages"),
 		IndexName:              aws.String("recipient-index"),
 		KeyConditionExpression: aws.String("recipient = :r"), // Only partition key here
@@ -138,17 +123,11 @@ func getString(av types.AttributeValue) string {
 	return ""
 }
 
-func QueryForCount(receiver string) (int, error) {
+func (s *Server) QueryForCount(receiver string) (int, error) {
 
 	count := 0
-	cfg, err := config.LoadDefaultConfig(context.TODO(),
-		config.WithRegion("eu-north-1"))
-	if err != nil {
-		return count, err
-	}
 
-	client := dynamodb.NewFromConfig(cfg)
-	result, err := client.Query(context.TODO(), &dynamodb.QueryInput{
+	result, err := s.dynamoClient.Query(context.TODO(), &dynamodb.QueryInput{
 		TableName:              aws.String("Messages"),
 		IndexName:              aws.String("recipient-index"),
 		KeyConditionExpression: aws.String("recipient = :r"), // Only partition key here
