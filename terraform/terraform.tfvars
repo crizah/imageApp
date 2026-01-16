@@ -1,8 +1,4 @@
 region = "us-east-1"
-t1 = "Users"
-
-
-t2 = "Messages"
-
-
-bucketName = "encrypted-files"
+users = "Users"
+msgs= "Messages"
+bucketName = "encrypted-files-imageapp"

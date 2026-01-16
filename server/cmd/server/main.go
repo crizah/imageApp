@@ -1,0 +1,39 @@
+package main
+
+import (
+	"log"
+	"net/http"
+	"os"
+
+	"fmt"
+	"server/internal/server"
+
+	"github.com/joho/godotenv"
+)
+
+type MsgRequest struct {
+	MessageID string `json:"messageID"`
+}
+
+func main() {
+	godotenv.Load()
+
+	s, err := server.InitialiseServer()
+	if err != nil {
+		log.Fatalf("Failed to initialize server: %v", err)
+	}
+	x := os.Getenv("WITH_INGRESS")
+
+	http.HandleFunc(fmt.Sprintf("%s/signup", x), s.SignUpHandler)
+	http.HandleFunc(fmt.Sprintf("%s/login", x), s.LoginHandler)
+	http.HandleFunc(fmt.Sprintf("%s/auth/check", x), s.CheckAuthHandler)
+
+	http.HandleFunc(fmt.Sprintf("%s/usernames", x), s.AuthMiddleware(s.UserHandler))
+	http.HandleFunc(fmt.Sprintf("%s/upload", x), s.AuthMiddleware(s.UploadHandler))
+	http.HandleFunc(fmt.Sprintf("%s/notifs", x), s.AuthMiddleware(s.NotificationHandler))
+
+	http.HandleFunc(fmt.Sprintf("%s/files", x), s.AuthMiddleware(s.FileHandler))
+
+	fmt.Println("Server starting on :8080")
+	http.ListenAndServe(":8080", nil)
+}

@@ -1,88 +1,75 @@
-
 import json
 import boto3
+import os
 from datetime import datetime
 
-# AWS clients
-dynamodb = boto3.client("dynamodb", region_name="us-east-1")
-# kms = boto3.client("kms", region_name="us-east-1")
-sns = boto3.client("sns", region_name="us-east-1")
+# from env variables set by terraform
+REGION = os.environ.get("AWS_REGION_NAME", "us-east-1") # defaults JUST IN CASE
+DYNAMODB_TABLE = os.environ.get("DYNAMODB_TABLE", "Users")
 
+# server
+dynamodb = boto3.client("dynamodb", region_name=REGION)
+sns = boto3.client("sns", region_name=REGION)
 
 def handler(event, context):
-    print("=== POST CONFIRMATION TRIGGER ===")
-    print("Full event:", json.dumps(event, indent=2))
-
+    
     try:
-        # Cognito trigger structure
+        # get user info from event
         username = event.get("userName")
-        email = event.get("request", {}).get("userAttributes", {}).get("email")
-
-        print("Username:", username)
-        print("Email:", email)
-
+        user_attributes = event.get("request", {}).get("userAttributes", {})
+        email = user_attributes.get("email")
+        user_sub = user_attributes.get("sub") 
+        
+      
+        # need all 3
         if not username:
-            raise Exception("Missing username")
-
+            raise ValueError("Missing username in Cognito event")
         if not email:
-            print("Email not found, using placeholder")
-
-        # # 1. Create KMS key
-        # print("Creating KMS key...")
-        # key_response = kms.create_key(
-        #     Description=f"Key for user {username}",
-        #     Tags=[
-        #         {
-        #             "TagKey": "Username",
-        #             "TagValue": username
-        #         }
-        #     ]
-        # )
-
-        # kms_key_id = key_response["KeyMetadata"]["KeyId"]
-        # print("✅ Created KMS key:", kms_key_id)
-
-        # Create SNS topic
-        print("Creating SNS topic...")
-        topic_response = sns.create_topic(
-            Name=f"user-{username}-notifications"
-        )
-
+            raise ValueError("Missing email in Cognito event")
+        if not user_sub:
+            raise ValueError("Missing user sub (ID) in Cognito event")
+        
+        # create SNS topic for user notifications
+       
+        topic_name = f"user-{username}-notifications"
+        topic_response = sns.create_topic(Name=topic_name)
         topic_arn = topic_response["TopicArn"]
-        print(" Created SNS topic:", topic_arn)
-
-        # Subscribe email if available
-        if email:
-            print("Subscribing email to SNS...")
-            sns.subscribe(
-                TopicArn=topic_arn,
-                Protocol="email",
-                Endpoint=email
-            )
-            print(" Subscribed email to SNS")
-        else:
-            print(" Skipping email subscription (no email provided)")
-
-        # 4. Save to DynamoDB
-        print("Saving to DynamoDB...")
+     
+        
+        # Subscribe user's email to their topic
+       
+        sns.subscribe(
+            TopicArn=topic_arn,
+            Protocol="email",
+            Endpoint=email
+        )
+      
+        
+        # Save user to DynamoDB
+        
         dynamodb.put_item(
-            TableName="Users",
+            TableName=DYNAMODB_TABLE,
             Item={
                 "username": {"S": username},
-                "email": {"S": email or "no-email-provided"},
-                # "kmsKeyId": {"S": kms_key_id},
+                # "userId": {"S": user_sub},  # Use Cognito sub as primary ID
+                "email": {"S": email},
                 "snsTopicArn": {"S": topic_arn},
-                "createdAt": {"S": datetime.utcnow().isoformat()}
+                "emailVerified": {"BOOL": True}, 
+                "createdAt": {"S": datetime.now().isoformat()},
+                # "updatedAt": {"S": datetime.utcnow().isoformat()}
             }
         )
+        print(" User saved to DynamoDB")
+        
 
-        print("User saved to DynamoDB")
-        print("=== SUCCESS ===")
-
-        # MUST return event to Cognito
+        
+        # return the event to Cognito
         return event
-
+        
     except Exception as e:
-        print("ERROR:", str(e))
-        # Do not block user signup
+        print(f" ERROR: {str(e)}")
+        print(f"Error type: {type(e).__name__}")
+        
+        # Still return event so Cognito doesn't fail the confirmation
+        # The user is already verified, we just couldn't do post-processing
         return event

@@ -4,25 +4,30 @@ variable "region" {
   
 }
 
-variable "t1" {
+variable "users" {
     type = string
     description = "Tables name"
   
 }
 
-variable "t2" {
+variable "msgs" {
     type = string
     description = "Tables name"
   
 }
 
-variable "pk2"{
+variable "msgspk"{
     type = string
     default = "messageID"
 }
-variable "pk1"{
+variable "userspk"{
     type = string
     default = "username"
+}
+
+variable "msgsgsi"{
+    type = string
+    default = "recipientIndex"
 }
 
 variable "bucketName"{

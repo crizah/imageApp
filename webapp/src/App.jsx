@@ -166,7 +166,7 @@ function SendMsg({username}) {
     async function fetchUsers() {
       try {
         const res = await axios.get(
-          "https://5dx7ydfhxe.execute-api.eu-north-1.amazonaws.com/production/resource"
+          "https://5dx7ydfhxe.execute-api.eu-north-1.amazonaws.com/production/resource" // this api gateway needs to change
         );
         setUsers(res.data.usernames || []);
         console.log("got users", res.data.usernames);
