@@ -59,7 +59,7 @@ export function SignUp() {
       setMessage("Account created successfully!");
       setFormData({ username: "", email: "", password: "" }); // clear
       
-      setTimeout(() => navigate("/"), 1000);
+      setTimeout(() => navigate("/verify"), 1000);
 
     } catch (error) {
       setIsSuccess(false);

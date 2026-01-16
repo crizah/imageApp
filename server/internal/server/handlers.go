@@ -361,3 +361,33 @@ func (s *Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 		"message": "Sent to receiver successfully",
 	})
 }
+
+func (s *Server) VerificationHandler(w http.ResponseWriter, r *http.Request) {
+	// get token
+	// verify with cognito
+	var req struct {
+		Username         string `json:"username"`
+		VerificationCode string `json:"verificationCode"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	_, err := s.cognitoClient.ConfirmSignUp(context.TODO(), &cognitoidentityprovider.ConfirmSignUpInput{
+		ClientId:         aws.String(s.userPoolClientId),
+		Username:         aws.String(req.Username),
+		ConfirmationCode: aws.String(req.VerificationCode),
+	})
+
+	if err != nil {
+		http.Error(w, "Verification failed: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "Verification successful",
+	})
+}

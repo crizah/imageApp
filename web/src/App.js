@@ -7,6 +7,7 @@ import { Notif } from './pages/GetNotif';
 import { SignUp } from './pages/Signup';  
 import { Login } from './pages/LogIn';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { Verification } from './pages/Verification';
 
 
 import './App.css';
@@ -22,6 +23,10 @@ function App() {
         <Route
           path={`/`}
           element={<Login />}
+        />
+        <Route
+          path={`/verify`}
+          element={<Verification />}
         />
        
        <Route

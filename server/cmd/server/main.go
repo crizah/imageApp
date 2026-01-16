@@ -27,6 +27,7 @@ func main() {
 	http.HandleFunc(fmt.Sprintf("%s/signup", x), s.SignUpHandler)
 	http.HandleFunc(fmt.Sprintf("%s/login", x), s.LoginHandler)
 	http.HandleFunc(fmt.Sprintf("%s/auth/check", x), s.CheckAuthHandler)
+	http.HandleFunc(fmt.Sprintf("%s/verify", x), s.VerificationHandler)
 
 	http.HandleFunc(fmt.Sprintf("%s/usernames", x), s.AuthMiddleware(s.UserHandler))
 	http.HandleFunc(fmt.Sprintf("%s/upload", x), s.AuthMiddleware(s.UploadHandler))
