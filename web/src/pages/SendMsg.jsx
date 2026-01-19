@@ -20,7 +20,8 @@ function SendMsg() {
   const [search, setSearch] = useState('');
   const [selectedUser, setSelectedUser] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
-  const x = window.RUNTIME_CONFIG.BACKEND_URL;
+  // const x = window.RUNTIME_CONFIG.BACKEND_URL;
+  const x = process.env.REACT_APP_BACKEND_URL;
   const { user, logout } = useAuth();
   const username = user?.username;
 
@@ -36,8 +37,8 @@ function SendMsg() {
     
       try {
         const res = await axios.get(
-          `${x}/usernames` 
-        );
+          `${x}/usernames` , {
+          withCredentials: true});
         setUsers(res.data.usernames || []);
         console.log("got users", res.data.usernames);
       } catch (err) {
@@ -90,10 +91,9 @@ function SendMsg() {
       `${x}/upload`,
       formData,
       {
-        headers: {
-          'Content-Type': 'multipart/form-data'
+          withCredentials: true,
+          
         }
-      }
     );
 
 

@@ -10,6 +10,9 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { Verification } from './pages/Verification';
 
 
+// npx serve -s build -p 3000
+
+
 import './App.css';
 
 
@@ -21,11 +24,11 @@ function App() {
     <Router>
       <Routes>
         <Route
-          path={`/`}
+          path={"/"}
           element={<Login />}
         />
         <Route
-          path={`/verify`}
+          path={"/verify"}
           element={<Verification />}
         />
        
@@ -39,7 +42,7 @@ function App() {
         />
 
         <Route
-          path={`/signup`}
+          path={"/signup"}
           element={<SignUp />}
         />
 
@@ -87,7 +90,7 @@ function App() {
   );
 }
 
-export default {App};
+export default App;
 
 
 

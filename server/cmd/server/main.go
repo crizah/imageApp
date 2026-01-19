@@ -24,17 +24,19 @@ func main() {
 	}
 	x := os.Getenv("WITH_INGRESS")
 
-	http.HandleFunc(fmt.Sprintf("%s/signup", x), s.SignUpHandler)
-	http.HandleFunc(fmt.Sprintf("%s/login", x), s.LoginHandler)
-	http.HandleFunc(fmt.Sprintf("%s/auth/check", x), s.CheckAuthHandler)
-	http.HandleFunc(fmt.Sprintf("%s/verify", x), s.VerificationHandler)
+	mux := http.NewServeMux()
 
-	http.HandleFunc(fmt.Sprintf("%s/usernames", x), s.AuthMiddleware(s.UserHandler))
-	http.HandleFunc(fmt.Sprintf("%s/upload", x), s.AuthMiddleware(s.UploadHandler))
-	http.HandleFunc(fmt.Sprintf("%s/notifs", x), s.AuthMiddleware(s.NotificationHandler))
+	mux.HandleFunc(fmt.Sprintf("%s/signup", x), s.SignUpHandler)        // works
+	mux.HandleFunc(fmt.Sprintf("%s/login", x), s.LoginHandler)          // works
+	mux.HandleFunc(fmt.Sprintf("%s/auth/check", x), s.CheckAuthHandler) // works
+	mux.HandleFunc(fmt.Sprintf("%s/verify", x), s.VerificationHandler)  // works
 
-	http.HandleFunc(fmt.Sprintf("%s/files", x), s.AuthMiddleware(s.FileHandler))
+	mux.HandleFunc(fmt.Sprintf("%s/usernames", x), s.AuthMiddleware(s.UserHandler)) // works
+	mux.HandleFunc(fmt.Sprintf("%s/upload", x), s.AuthMiddleware(s.UploadHandler))
+	mux.HandleFunc(fmt.Sprintf("%s/notifs", x), s.AuthMiddleware(s.NotificationHandler)) // works
+	mux.HandleFunc(fmt.Sprintf("%s/files", x), s.AuthMiddleware(s.FileHandler))
+	mux.HandleFunc(fmt.Sprintf("%s/logout", x), s.AuthMiddleware(s.LogoutHandler))
 
 	fmt.Println("Server starting on :8080")
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":8080", mux)
 }

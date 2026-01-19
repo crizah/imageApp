@@ -12,13 +12,16 @@ function Msg() {
   const { sender, messages } = location.state || {};
 
   const [images, setImages] = useState([]);
-  const x = window.RUNTIME_CONFIG.BACKEND_URL;
+  // const x = window.RUNTIME_CONFIG.BACKEND_URL;
+  const x = process.env.REACT_APP_BACKEND_URL;
 
   const getMessages = async () => {
     try {
       const res = await axios.post(`${x}/files`, {
         msgs: messages,
-      });
+      }, {withCredentials: true, headers:{
+        "Content-Type": "application/json"
+      }});
 
       //array of base64-encoded image strings
       const fileData = res.data.files || [];

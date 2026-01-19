@@ -25,6 +25,7 @@ type SendMessageRequest struct {
 }
 
 func (s *Server) SendMsg(sender string, receiver string, fileName string, filePath string, msgID string) error {
+	BUCKET := os.Getenv("BUCKET_NAME")
 
 	// get the recipients kms key from dynamo Table
 
@@ -68,7 +69,7 @@ func (s *Server) SendMsg(sender string, receiver string, fileName string, filePa
 
 	// upload encrypted image to s3
 	s3Key := fmt.Sprintf("%s/%s/%s", sender, receiver, fileName)
-	err = s.UploadToS3(encryptedImage, s3Key)
+	err = s.UploadToS3(encryptedImage, s3Key, BUCKET)
 	if err != nil {
 
 		return err
@@ -78,7 +79,7 @@ func (s *Server) SendMsg(sender string, receiver string, fileName string, filePa
 	err = s.putIntoMessagesTable(sender, receiver, s3Key, fileName, encryptedDK, msgID)
 	if err != nil {
 		// if error, delete from S3
-		err = s.DeletFromS3(s3Key)
+		err = s.DeletFromS3(s3Key, BUCKET)
 		if err != nil {
 			return err
 		}

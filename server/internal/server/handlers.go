@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -9,14 +8,40 @@ import (
 	"net/http"
 	"os"
 	"strings"
-
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider"
-	"github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider/types"
 )
 
-// Your signup endpoint
+var allowedOrigin = map[string]bool{
+	os.Getenv("CLIENT_IP"):  true,
+	"http://localhost:3000": true,
+	"http://localhost:5173": true,
+}
+
+func EnableCors(w http.ResponseWriter, r *http.Request, origin string) {
+	if allowedOrigin[origin] {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+
+	}
+
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+}
 func (s *Server) SignUpHandler(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	EnableCors(w, r, origin)
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	var req struct {
 		Email    string `json:"email"`
 		Username string `json:"username"`
@@ -47,23 +72,10 @@ func (s *Server) SignUpHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *Server) CallCognito(username string, password string, email string) (*cognitoidentityprovider.SignUpOutput, error) {
-
-	resp, err := s.cognitoClient.SignUp(context.TODO(), &cognitoidentityprovider.SignUpInput{
-		ClientId: aws.String(s.userPoolClientId),
-		Username: aws.String(username), // Can be username or email
-		Password: aws.String(password),
-		UserAttributes: []types.AttributeType{
-			{Name: aws.String("email"), Value: aws.String(email)},
-			{Name: aws.String("name"), Value: aws.String(username)},
-		},
-	})
-
-	return resp, err
-
-}
-
 func (s *Server) LogoutHandler(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	EnableCors(w, r, origin)
+
 	_, err := r.Cookie("access_token")
 	if err == nil {
 		http.Error(w, "Unauthorized - no token", http.StatusUnauthorized)
@@ -109,6 +121,12 @@ func (s *Server) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	EnableCors(w, r, origin)
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 
 	var req struct {
 		Username string `json:"username"` // can be email or username
@@ -121,25 +139,9 @@ func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// authenticate with cognito
-	authResult, err := s.cognitoClient.InitiateAuth(context.TODO(), &cognitoidentityprovider.InitiateAuthInput{
-		AuthFlow: types.AuthFlowTypeUserPasswordAuth,
-		ClientId: aws.String(s.userPoolClientId),
-		AuthParameters: map[string]string{
-			"USERNAME": req.Username,
-			"PASSWORD": req.Password,
-		},
-	})
-
+	authResult, err := s.AuthenticateCognito(req.Username, req.Password)
 	if err != nil {
-		if strings.Contains(err.Error(), "NotAuthorizedException") {
-			http.Error(w, "Invalid username or password", http.StatusUnauthorized)
-			return
-		}
-		if strings.Contains(err.Error(), "UserNotConfirmedException") {
-			http.Error(w, "Please verify your email before logging in", http.StatusForbidden)
-			return
-		}
-		http.Error(w, "Login failed: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "error authenticating with cognito"+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -190,6 +192,8 @@ func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) NotificationHandler(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	EnableCors(w, r, origin)
 
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -222,8 +226,6 @@ func (s *Server) NotificationHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"msgs":  msgs,
 		"count": count,
@@ -232,7 +234,13 @@ func (s *Server) NotificationHandler(w http.ResponseWriter, r *http.Request) {
 }
 func (s *Server) UserHandler(w http.ResponseWriter, r *http.Request) {
 	// this is a get request
+	origin := r.Header.Get("Origin")
+	EnableCors(w, r, origin)
 
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusBadRequest)
+		return
+	}
 	// query the Users table to get all usernames
 	usernames, err := s.QueryForUsernames()
 	if err != nil {
@@ -249,6 +257,10 @@ func (s *Server) UserHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) FileHandler(w http.ResponseWriter, r *http.Request) {
+
+	origin := r.Header.Get("Origin")
+	EnableCors(w, r, origin)
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -296,11 +308,10 @@ func (s *Server) FileHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 
-	// w.Header().Set("Access-Control-Allow-Origin", "*")
-	// w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	// w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-	if r.Method == "OPTIONS" {
+	origin := r.Header.Get("Origin")
+	EnableCors(w, r, origin)
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -327,6 +338,11 @@ func (s *Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Received file: %s for recipient: %s by sender: %s\n", header.Filename, recipient, sender)
 
 	// Save file temporarily
+	err = os.Mkdir("uploads", os.ModePerm)
+	if err != nil {
+		http.Error(w, "cpuldnt create dir"+err.Error(), http.StatusInternalServerError)
+		return
+	}
 	filepath := "./uploads/" + header.Filename
 	dst, err := os.Create(filepath)
 	if err != nil {
@@ -345,7 +361,8 @@ func (s *Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = s.SendMsg(sender, recipient, header.Filename, filepath, msgID)
 	if err != nil {
-		fmt.Println(err)
+		http.Error(w, "couldnt send msg"+err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Delete local file after successful S3 upload
@@ -363,6 +380,15 @@ func (s *Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) VerificationHandler(w http.ResponseWriter, r *http.Request) {
+
+	origin := r.Header.Get("Origin")
+	EnableCors(w, r, origin)
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	// get token
 	// verify with cognito
 	var req struct {
@@ -375,15 +401,17 @@ func (s *Server) VerificationHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := s.cognitoClient.ConfirmSignUp(context.TODO(), &cognitoidentityprovider.ConfirmSignUpInput{
-		ClientId:         aws.String(s.userPoolClientId),
-		Username:         aws.String(req.Username),
-		ConfirmationCode: aws.String(req.VerificationCode),
-	})
-
-	if err != nil {
-		http.Error(w, "Verification failed: "+err.Error(), http.StatusInternalServerError)
+	v, err := s.VerifyCognito(req.Username, req.VerificationCode)
+	if err != nil && !v {
+		http.Error(w, "user not verified"+err.Error(), http.StatusForbidden)
 		return
+
+	}
+
+	if !v {
+		http.Error(w, "user not verified", http.StatusForbidden)
+		return
+
 	}
 
 	w.Header().Set("Content-Type", "application/json")

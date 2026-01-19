@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 import axios from "axios";
 
 import "../index.css";
@@ -7,14 +8,17 @@ import "../index.css";
 export function Login() {
   const navigate = useNavigate();
   
-  const x = window.RUNTIME_CONFIG.BACKEND_URL;
+  // const x = window.RUNTIME_CONFIG.BACKEND_URL;
+  const x = process.env.REACT_APP_BACKEND_URL;
 
-  const [formData, setFormData] = useState({
-    identifier: "",
-    password: ""
-  });
+
+
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const { checkAuth } = useAuth();
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,7 +29,10 @@ export function Login() {
 
     try {
       await axios.post(
-        `${x}/login`, formData,
+        `${x}/login`, {
+          username : username,
+          password: password
+        },
         {
           withCredentials: true,
           headers: {
@@ -33,6 +40,8 @@ export function Login() {
           }
         }
       );
+
+      await checkAuth();
 
       navigate("/home");
     } catch (error) {
@@ -91,8 +100,9 @@ return (
               <input
                 type="text"
                 placeholder="Username or Email"
-                value={formData.identifier}
-                onChange={(e) => setFormData({ ...formData, identifier: e.target.value })}
+                value={username}
+                
+                onChange={(e) => setUsername(e.target.value)}
                 disabled={isLoading}
                 className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-all duration-300 backdrop-blur-sm"
               />
@@ -110,8 +120,8 @@ return (
               <input
                 type="password"
                 placeholder="Password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 disabled={isLoading}
                 className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition-all duration-300 backdrop-blur-sm"
               />

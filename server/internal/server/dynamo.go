@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
@@ -139,7 +140,7 @@ func (s *Server) QueryForCount(receiver string) (int, error) {
 
 	result, err := s.dynamoClient.Query(context.TODO(), &dynamodb.QueryInput{
 		TableName:              aws.String("Messages"),
-		IndexName:              aws.String("recipient-index"),
+		IndexName:              aws.String("recipientIndex"),
 		KeyConditionExpression: aws.String("recipient = :r"), // Only partition key here
 		FilterExpression:       aws.String("#s = :s"),        // Status goes in filter
 		ExpressionAttributeValues: map[string]types.AttributeValue{

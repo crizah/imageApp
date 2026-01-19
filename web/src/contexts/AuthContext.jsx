@@ -7,17 +7,20 @@ const AuthContext = createContext();
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const backendUrl = window.RUNTIME_CONFIG.BACKEND_URL;
+  // const x = window.RUNTIME_CONFIG.BACKEND_URL;
+  const x = process.env.REACT_APP_BACKEND_URL;
 
   // Check if user is authenticated on app load
   useEffect(() => {
     checkAuth();
   }, []);
 
+
+
   const checkAuth = async () => {
     try {
-      const res = await axios.get(`${backendUrl}/auth/check`, {
-        withCredentials: true
+      const res = await axios.get(`${x}/auth/check`, {
+        withCredentials: true,
       });
       if (res.data.authenticated) {
         setUser({ username: res.data.username });
@@ -28,10 +31,17 @@ export function AuthProvider({ children }) {
       setLoading(false);
     }
   };
+      let config = {
+      headers: {
+        "Content-Type": "application/json"
+        
+      }
+    }
 
   const logout = async () => {
+    
     try {
-      await axios.post(`${backendUrl}/logout`, {}, { withCredentials: true });
+      await axios.post(`${x}/logout`, {}, { withCredentials: true }, config);
       setUser(null);
     } catch (error) {
       console.error("Logout failed:", error);

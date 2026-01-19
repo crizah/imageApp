@@ -16,7 +16,8 @@ export function SignUp() {
   const [isLoading, setIsLoading] = useState(false);
     const [focusedField, setFocusedField] = useState(null);
   const navigate = useNavigate();
-  const x = window.RUNTIME_CONFIG.BACKEND_URL;
+  // const x = window.RUNTIME_CONFIG.BACKEND_URL;
+  const x = process.env.REACT_APP_BACKEND_URL;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -53,11 +54,17 @@ export function SignUp() {
         "username": formData.username,
         "email": formData.email,
         "password": formData.password
-      }, {withCredentials:true}, config);
+      }, {
+                        withCredentials: true,
+                        headers: {
+                        "Content-Type": "application/json"}
+                    });
 
       setIsSuccess(true);
       setMessage("Account created successfully!");
+      localStorage.setItem("pendingVerification", formData.username);
       setFormData({ username: "", email: "", password: "" }); // clear
+       
       
       setTimeout(() => navigate("/verify"), 1000);
 
