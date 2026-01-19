@@ -13,16 +13,16 @@ Event-driven messaging system built on AWS serverless infrastructure. All resour
 | **Amazon S3** | Encrypted message payload storage |
 | **AWS KMS** | Customer master keys for envelope encryption |
 | **Amazon SNS** | Message notification delivery |
-
+ 
 
 ## Infrastructure as Code
 
 All AWS resources managed via Terraform:
+- Cognito User Pool
 - DynamoDB tables (Users, Messages)
 - S3 buckets with encryption policies
 - Lambda functions with IAM execution roles
-- API Gateway REST APIs
-- Cognito User Pools and Identity Pools
+
   
 
 ## Architecture
@@ -66,6 +66,28 @@ All AWS resources managed via Terraform:
 ![Decrypted Message](ss/got.png)
 
 ---
+## Getting Started
+
+### Prerequisites
+
+* Docker >= 24.0
+* Docker Compose >= 2.20
+
+### Run
+
+Clone Repo 
+```
+git clone https://github.com/crizah/imageApp.git
+cd fontend-example
+```
+Run with docker compose
+
+```
+docker compose up --build
+```
+The frontend should be running on http://localhost:3000
+
+---
 
 ## Security Implementation
 
@@ -85,13 +107,6 @@ All AWS resources managed via Terraform:
 - Cognito issues JWT tokens (ID, access, refresh)
 - API Gateway validates JWT signature and expiration
 - Lambda receives authenticated user context
-
-## Monitoring
-
-- CloudWatch logs for Lambda execution traces
-- API Gateway access logs
-- Custom metrics for encryption latency
-- Alarms for Lambda errors and DynamoDB throttling
 
 
 

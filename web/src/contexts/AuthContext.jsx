@@ -31,17 +31,15 @@ export function AuthProvider({ children }) {
       setLoading(false);
     }
   };
-      let config = {
-      headers: {
-        "Content-Type": "application/json"
-        
-      }
-    }
+  
 
   const logout = async () => {
     
     try {
-      await axios.post(`${x}/logout`, {}, { withCredentials: true }, config);
+      await axios.post(`${x}/logout`,{}, { withCredentials: true, headers:{
+        "Content-Type": "application/json"
+
+      }});
       setUser(null);
     } catch (error) {
       console.error("Logout failed:", error);

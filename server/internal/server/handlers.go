@@ -338,11 +338,11 @@ func (s *Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Received file: %s for recipient: %s by sender: %s\n", header.Filename, recipient, sender)
 
 	// Save file temporarily
-	err = os.Mkdir("uploads", os.ModePerm)
-	if err != nil {
-		http.Error(w, "cpuldnt create dir"+err.Error(), http.StatusInternalServerError)
-		return
-	}
+	// err = os.Mkdir("uploads", os.ModePerm)
+	// if err != nil {
+	// 	http.Error(w, "cpuldnt create dir"+err.Error(), http.StatusInternalServerError)
+	// 	return
+	// }
 	filepath := "./uploads/" + header.Filename
 	dst, err := os.Create(filepath)
 	if err != nil {
