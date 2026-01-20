@@ -37,6 +37,6 @@ func main() {
 	mux.HandleFunc(fmt.Sprintf("%s/files", x), s.AuthMiddleware(s.FileHandler))
 	mux.HandleFunc(fmt.Sprintf("%s/logout", x), s.AuthMiddleware(s.LogoutHandler))
 
-	fmt.Println("Server starting on :8080")
-	http.ListenAndServe(":8080", mux)
+	fmt.Println("Server starting on :8081")
+	http.ListenAndServe(":8081", mux)
 }
