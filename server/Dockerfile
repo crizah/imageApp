@@ -7,12 +7,10 @@ RUN go mod download
 
 
 COPY . .
-COPY .env .
-
 
 RUN go build -o server ./cmd/server/main.go
 
-EXPOSE 8080 
+EXPOSE 8082
 CMD ["./server"]
 
 
