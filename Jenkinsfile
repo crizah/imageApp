@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = 'docker-hub-creds'
+        DOCKERHUB_CREDENTIALS = 'docker-hub-creds-global'
         USERNAME = "shaizah"
         SERVER_IMAGE = 'shaizah/kube:imageApp-server'
         WEB_IMAGE    = 'shaizah/kube:imageApp-web'
