@@ -3,6 +3,7 @@ pipeline {
 
     environment {
         DOCKERHUB_CREDENTIALS = 'docker-hub-creds'
+        USERNAME = "shaizah"
         SERVER_IMAGE = 'shaizah/kube:imageApp-server'
         WEB_IMAGE    = 'shaizah/kube:imageApp-web'
         SERVER_PATH = './server'
@@ -46,13 +47,16 @@ pipeline {
                         returnStdout: true
                     ).trim()
 
-                    docker.withRegistry('', DOCKERHUB_CREDENTIALS) {
+                    docker.withRegistry('Username/Password', DOCKERHUB_CREDENTIALS) {
                         sh """
                         docker build -t ${SERVER_IMAGE} ${SERVER_PATH}
                         docker push ${SERVER_IMAGE}
                         """
                     }
                 }
+
+
+                
             }
         }
 
@@ -67,7 +71,7 @@ pipeline {
                         returnStdout: true
                     ).trim()
 
-                    docker.withRegistry('', DOCKERHUB_CREDENTIALS) {
+                    docker.withRegistry('Username/Password', DOCKERHUB_CREDENTIALS) {
                         sh """
                         docker build -t ${WEB_IMAGE} ${WEB_PATH}
                         docker push ${WEB_IMAGE}
