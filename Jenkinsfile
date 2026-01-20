@@ -47,7 +47,7 @@ pipeline {
                         returnStdout: true
                     ).trim()
 
-                    docker.withRegistry('Username/Password', DOCKERHUB_CREDENTIALS) {
+                    docker.withRegistry('', DOCKERHUB_CREDENTIALS) {
                         sh """
                         docker build -t ${SERVER_IMAGE} ${SERVER_PATH}
                         docker push ${SERVER_IMAGE}
@@ -71,7 +71,7 @@ pipeline {
                         returnStdout: true
                     ).trim()
 
-                    docker.withRegistry('Username/Password', DOCKERHUB_CREDENTIALS) {
+                    docker.withRegistry('', DOCKERHUB_CREDENTIALS) {
                         sh """
                         docker build -t ${WEB_IMAGE} ${WEB_PATH}
                         docker push ${WEB_IMAGE}
