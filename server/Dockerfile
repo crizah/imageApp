@@ -7,11 +7,7 @@ RUN go mod download
 
 
 COPY . .
-COPY .env .
-
-
-
-
+# COPY .env .
 
 RUN go build -o server ./cmd/server/main.go
 
