@@ -4,16 +4,24 @@ services:
   backend:
     build: ./server
     ports:
-      - "8080:8080"
+      - "8082:8082"
     environment:
       ENV: dev
       CLIENT_IP: http://localhost:3000
+      USER_POOL_CLIENT_ID: ${USER_POOL_CLIENT_ID}
+      USER_POOL_ID: ${USER_POOL_ID}
+      AWS_REGION: ${AWS_REGION}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      BUCKET_NAME: ${BUCKET_NAME}
+      SECURE: ${SECURE}
+      WITH_INGRESS: ${WITH_INGRESS}
 
   frontend:
     build: ./web
     ports:
       - "3000:80"
     environment:
-      BACKEND_URL: http://localhost:8080
+      BACKEND_URL: http://localhost:8082
     depends_on:
       - backend

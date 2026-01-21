@@ -11,8 +11,8 @@ export function Verification() {
     const [message, setMessage] = useState('');
     const [username, setUsername] = useState('');
     const navigate = useNavigate();
-    // const x = window.RUNTIME_CONFIG.BACKEND_URL;
-    const x = process.env.REACT_APP_BACKEND_URL;
+    const x = window.RUNTIME_CONFIG.BACKEND_URL;
+    // const x = process.env.REACT_APP_BACKEND_URL;
     useEffect(() => {
 
     

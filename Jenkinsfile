@@ -8,6 +8,7 @@ pipeline {
         WEB_IMAGE    = 'shaizah/kube:imageApp-web'
         SERVER_PATH = './server'
         WEB_PATH = './web'
+        
     }
 
     stages {

@@ -7,8 +7,8 @@ const AuthContext = createContext();
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  // const x = window.RUNTIME_CONFIG.BACKEND_URL;
-  const x = process.env.REACT_APP_BACKEND_URL;
+  const x = window.RUNTIME_CONFIG.BACKEND_URL;
+  // const x = process.env.REACT_APP_BACKEND_URL;
 
   // Check if user is authenticated on app load
   useEffect(() => {

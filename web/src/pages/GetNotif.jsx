@@ -13,8 +13,8 @@ function Notif() {
   const {user} = useAuth();
   const receiver = user?.username;
   const navigate = useNavigate();
-  // const x = window.RUNTIME_CONFIG.BACKEND_URL;
-  const x = process.env.REACT_APP_BACKEND_URL;
+  const x = window.RUNTIME_CONFIG.BACKEND_URL;
+  // const x = process.env.REACT_APP_BACKEND_URL;
   const fetchMSG = async () => {
     try {
       const res = await axios.post(`${x}/notifs`, {

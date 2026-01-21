@@ -34,3 +34,24 @@ variable "bucketName"{
     type = string
     description = "s3 bucket name"
 }
+
+variable "sec"{
+    type = string
+    description = "secure for https"
+    
+}
+
+variable "ingress"{
+    type = string
+    description = "with ingress for k8s"
+}
+
+variable "ssh_key"{
+    type = string
+    description = "ssh key for ec2"
+}
+
+variable "ur_ip"{
+    type = string
+    description = "ur ip address"
+}
