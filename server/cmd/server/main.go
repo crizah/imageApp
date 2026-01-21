@@ -31,11 +31,11 @@ func main() {
 	mux.HandleFunc(fmt.Sprintf("%s/auth/check", x), s.CheckAuthHandler) // works
 	mux.HandleFunc(fmt.Sprintf("%s/verify", x), s.VerificationHandler)  // works
 
-	mux.HandleFunc(fmt.Sprintf("%s/usernames", x), s.AuthMiddleware(s.UserHandler)) // works
-	mux.HandleFunc(fmt.Sprintf("%s/upload", x), s.AuthMiddleware(s.UploadHandler))
+	mux.HandleFunc(fmt.Sprintf("%s/usernames", x), s.AuthMiddleware(s.UserHandler))      // works
+	mux.HandleFunc(fmt.Sprintf("%s/upload", x), s.AuthMiddleware(s.UploadHandler))       // works
 	mux.HandleFunc(fmt.Sprintf("%s/notifs", x), s.AuthMiddleware(s.NotificationHandler)) // works
-	mux.HandleFunc(fmt.Sprintf("%s/files", x), s.AuthMiddleware(s.FileHandler))
-	mux.HandleFunc(fmt.Sprintf("%s/logout", x), s.AuthMiddleware(s.LogoutHandler))
+	mux.HandleFunc(fmt.Sprintf("%s/files", x), s.AuthMiddleware(s.FileHandler))          // works
+	mux.HandleFunc(fmt.Sprintf("%s/logout", x), s.AuthMiddleware(s.LogoutHandler))       // DOES NOT WORK but i kinda dont care actually
 
 	fmt.Println("Server starting on :8082")
 	http.ListenAndServe(":8082", mux)
