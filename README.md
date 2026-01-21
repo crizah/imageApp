@@ -1,175 +1,85 @@
-<!-- # Serverless Chat Application (AWS)
-
-Event-driven messaging system built on AWS serverless infrastructure. All resources provisioned using **Terraform**.
-
-## Infrastructure Stack
-
-| Service | Purpose |
-|---------|---------|
-| **Amazon Cognito** | User Pools for authentication, Identity Pools for temporary credentials |
-| **AWS Lambda** | Event-driven compute for user provisioning and message handling |
-| **Amazon API Gateway** | RESTful API endpoints with Lambda integration |
-| **Amazon DynamoDB** | User metadata and message indices |
-| **Amazon S3** | Encrypted message payload storage |
-| **AWS KMS** | Customer master keys for envelope encryption |
-| **Amazon SNS** | Message notification delivery |
- 
-
-## Infrastructure as Code
-
-All AWS resources managed via Terraform:
-- Cognito User Pool
-- DynamoDB tables (Users, Messages)
-- S3 buckets with encryption policies
-- Lambda functions with IAM execution roles
-
-  
-
-## Architecture
-
-![Sign-Up Flow](ss/signUp.png)
-
-### Sign-Up Flow
-- User creates an account through the frontend using **username, email, and password**.
-- **Amazon Cognito User Pool** registers the user and associates their identity via an **Identity Pool**.
-- User completes **email verification** to activate the account.
-- Upon successful verification, a **Lambda function** is triggered to:
-  - Create a **user-specific AWS KMS key**
-  - Create an **SNS topic** for user notifications
-- The Lambda function persists user metadata in the **Users DynamoDB table**.
-
----
-
-![Message Flow](ss/message.png)
-
-### Message Flow
-- The frontend invokes an **API Gateway endpoint** to trigger a Lambda function that retrieves the list of registered users.
-- User A uploads a file/message intended for User B.
-- The backend retrieves **User B's KMS key reference** from the Users table.
-- A **data encryption key (DEK)** is generated and encrypted using User B's KMS key.
-- The message payload is encrypted using the DEK.
-- The encrypted message is stored in **Amazon S3**.
-- Message metadata, including the **S3 object key and encrypted DEK**, is stored in the **Messages DynamoDB table**.
-- User B receives a **notification email** indicating a new message.
-
-![SNS Message](ss/sns.png)
-
-#### Message Retrieval
-- User B logs in and requests unread message count.
-- The backend queries the Messages table to determine unread messages.
-- Upon selecting a message:
-  - The backend retrieves the encrypted message and encrypted DEK using the message ID.
-  - **AWS KMS** decrypts the DEK.
-  - The message is decrypted using the DEK.
-- The decrypted message is securely delivered to User B.
-
-![Decrypted Message](ss/got.png)
-
----
-## Getting Started
-
-### Prerequisites
-
-* Docker >= 24.0
-* Docker Compose >= 2.20
-
-### Run
-
-Clone Repo 
-```
-git clone https://github.com/crizah/imageApp.git
-cd fontend-example
-```
-Run with docker compose
-
-```
-docker compose up --build
-```
-The frontend should be running on http://localhost:3000
-
----
-
-## Security Implementation
-
-**Envelope encryption:**
-- Messages encrypted with symmetric data encryption keys (AES-256)
-- DEKs encrypted with recipient-specific KMS customer master keys
-- Encrypted DEK stored in DynamoDB, encrypted payload in S3
-
-**Access control:**
-- KMS key policies restrict decrypt operations to key owner
-- Cognito Identity Pool provides temporary AWS credentials
-- Lambda execution roles follow least privilege principle
-
-## Technical Notes
-
-**Authentication:**
-- Cognito issues JWT tokens (ID, access, refresh)
-- API Gateway validates JWT signature and expiration
-- Lambda receives authenticated user context
-
-
-
-
- -->
-
-
-
-Here’s an updated, **clean, DevOps-oriented README** with the additions you asked for. I’ve kept it technical, concise, and realistic—no fluff, no AI tone.
-
----
 
 # Serverless Chat Application (AWS)
 
-Event-driven messaging platform built on AWS serverless infrastructure, with containerized services and fully automated provisioning using **Terraform**.
-Designed with **security-first encryption**, **infrastructure as code**, and **CI/CD automation** in mind.
+A production-ready, event-driven chat application leveraging AWS serverless architecture with end-to-end encryption, automated infrastructure provisioning, and CI/CD pipelines. Built to demonstrate enterprise-grade DevOps practices and cloud-native development.
 
 ---
+## Technical stack
+The technoligies used: 
 
-## Infrastructure Stack
+| Service                | Technology used                                                  |
+| ---------------------- | ------------------------------------------------------------------ |
+| **Frontend**     |Built in React using Tailwind CSS        |
+| **Backend**         | Built in Golang, contains, JWT-based user authentication|
+| **AWS services** | Built on AWS serverless infrastructure                               |
+| **Terraform**    | Used to provison all the AWS servcies                             |
+| **Docker**          | Used to containerise each component of the app                             |
+| **Docker compose**            | Used to run and manage the multicontainer application              |
+| **Jenkins**         | Pipeline to automate building and pushing of Docker images                            |
+
+
+### Repository Structure
+```
+.
+├── server/               # Go server (Cognito integration, encryption logic)
+├── web/                   # React frontend (Tailwind CSS)
+├── terraform/             # All .tf files for AWS provisioning
+│   ├── cognito.tf
+│   ├── dynamodb.tf
+│   ├── ec2.tf
+│   ├── lambda.tf
+│   └── s3.tf
+├── lambda/                # Python function for post-signup hooks
+├── docker-compose.yml     # Multi-container orchestration
+├── Jenkinsfile            # CI/CD pipeline definition
+└── README.md
+```
+
+
+## AWS Services used
+All the AWS services used: 
 
 | Service                | Purpose                                                            |
 | ---------------------- | ------------------------------------------------------------------ |
 | **Amazon Cognito**     | User authentication via User Pools and Identity Pools              |
 | **AWS Lambda**         | Event-driven compute for user provisioning and messaging workflows |
 | **Amazon API Gateway** | REST APIs integrated with Lambda                                   |
-| **Amazon DynamoDB**    | User metadata and message indexing                                 |
+| **Amazon DynamoDB**    | User informtaion and Message metadat                             |
 | **Amazon S3**          | Encrypted message payload storage                                  |
 | **AWS KMS**            | Customer-managed keys for envelope encryption                      |
 | **Amazon SNS**         | Notification delivery for new messages                             |
+| **Amazon EC2**         | Deploy the application|
 
 ---
 
 ## Infrastructure as Code (Terraform)
-
 All AWS resources are provisioned using **Terraform**, including:
-
-* Cognito User Pool & Identity Pool
-* DynamoDB tables (Users, Messages)
-* Encrypted S3 buckets with strict access policies
-* KMS keys per user
-* Lambda functions with least-privilege IAM roles
-* EC2 instance with IAM Instance Profile
-* Security Groups and Elastic IP
-
-This setup ensures:
-
-* Reproducible infrastructure
-* No manual AWS console steps
-* Clean teardown and redeployment
+* 100% Terraform-managed: All the AWS resources are defined in .tf files
+* Reproducible deployments: Clone repo → terraform apply → fully functional app
+* Terraform makes an EC2 instance, installs the dependencies, clones the repo inside it and runs it with docker compose.
+* Immutable infrastructure: Destroy and recreate entire stack in minutes
 
 ---
 
 ## CI/CD Automation (Jenkins)
 
-This repository includes a **Jenkinsfile** used to automate:
-
-* Detecting changes in frontend and backend directories from github
-* Building Docker images if changes have occured
-* Tagging the images
-* Pushing images to Docker Hub using Jenkins credentials
+This repository includes a **Jenkinsfile**:
+* GitHub webhook integration: Detecting changes in frontend and backend directories from github upon a new commit
+* Builds the accosiated docker image and tags it appropriately.
+* Pushes the tagged image to docker hub
+ ### Stages
+ ```
+ 1. Checkout Code (GitHub webhook trigger)
+ 2. Detect Changes (compare git diff in ./server/ or ./web/)
+ 3. Build Docker Images (only if changes detected)
+ 4. Tag Images 
+ 5. Push to Docker Hub using credentials 
+```
 
 ---
+
+## Docker compose
+This is a multi container application and docker compose is used to run and manage the containers.
 
 ## Architecture
 
@@ -213,7 +123,6 @@ This repository includes a **Jenkinsfile** used to automate:
 * Encrypted DEK is decrypted via **KMS**
 * Message payload is decrypted and returned securely
 
-![Decrypted Message](ss/got.png)
 
 ---
 
@@ -324,12 +233,27 @@ http://localhost:3000
 
 ---
 
-### Screenshots
+## Screenshots
+### Signup page
 ![Signup page](ss/signUp_web.png)
+
+### Home page
 ![HomePage](ss/dashboard.png)
+
+### Send Message
 ![Send Message](ss/sendmsg.png)
+
+### Get Message
 ![Messages](ss/getmsgs.png)
 
 
+##  What I Learned
+
+- **AWS Services**: Hands-on experience with 8+ AWS services (Cognito, Lambda, KMS, DynamoDB, S3, SNS, EC2, API Gateway)
+- **Infrastructure as Code**: Transitioned from ClickOps to declarative Terraform. can now tear down/rebuild entire stack in 5 minutes
+- **Encryption**: Implemented envelope encryption from scratch (not just "turn on S3 encryption")
+- **DevOps Practices**: Set up CI/CD pipeline, not just `git push` to production
+- **Docker Multi-Stage Builds**: Reduced image sizes by 70% using builder patterns
+- **Security Mindset**: Designed system assuming AWS console access could be compromised (IAM roles > access keys)
 
 This project is designed to demonstrate **production-grade DevOps practices**, not just application logic.
