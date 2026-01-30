@@ -13,7 +13,7 @@ func (s *Server) CallCognito(username string, password string, email string) (*c
 
 	resp, err := s.cognitoClient.SignUp(context.TODO(), &cognitoidentityprovider.SignUpInput{
 		ClientId: aws.String(s.userPoolClientId),
-		Username: aws.String(username), // Can be username or email
+		Username: aws.String(username), // can be username or email
 		Password: aws.String(password),
 		UserAttributes: []types.AttributeType{
 			{Name: aws.String("email"), Value: aws.String(email)},

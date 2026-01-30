@@ -30,9 +30,6 @@ pipeline {
 
                     env.SERVER_CHANGED = changedFiles.contains('server/') ? 'true' : 'false'
                     env.WEB_CHANGED    = changedFiles.contains('web/')    ? 'true' : 'false'
-
-                    echo "Server changed: ${env.SERVER_CHANGED}"
-                    echo "Web changed: ${env.WEB_CHANGED}"
                 }
             }
         }
@@ -43,10 +40,6 @@ pipeline {
             }
             steps {
                 script {
-                    def commitSha = sh(
-                        script: "git rev-parse --short HEAD",
-                        returnStdout: true
-                    ).trim()
 
                     docker.withRegistry('', DOCKERHUB_CREDENTIALS) {
                         sh """
@@ -67,11 +60,7 @@ pipeline {
             }
             steps {
                 script {
-                    def commitSha = sh(
-                        script: "git rev-parse --short HEAD",
-                        returnStdout: true
-                    ).trim()
-
+                   
                     docker.withRegistry('', DOCKERHUB_CREDENTIALS) {
                         sh """
                         docker build -t ${WEB_IMAGE} ${WEB_PATH}

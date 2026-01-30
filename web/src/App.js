@@ -10,7 +10,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { Verification } from './pages/Verification';
 
 
-// npx serve -s build -p 3000
+
 
 
 import './App.css';
@@ -20,7 +20,7 @@ function App() {
  
   return (
 <AuthProvider>
-  {/* <BrowserRouter> */}
+ 
     <Router>
       <Routes>
         <Route
@@ -85,7 +85,7 @@ function App() {
       
       </Routes>
     </Router>
-  {/* </BrowserRouter> */}
+
 </AuthProvider>
   );
 }

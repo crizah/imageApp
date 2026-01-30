@@ -72,7 +72,6 @@ func decryptAES(data []byte, key []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	// Extract nonce from beginning
 	nonceSize := aesgcm.NonceSize()
 	if len(data) < nonceSize {
 		return nil, fmt.Errorf("ciphertext too short")
@@ -80,7 +79,7 @@ func decryptAES(data []byte, key []byte) ([]byte, error) {
 
 	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
 
-	// Decrypt
+	// decrypt
 	plaintext, err := aesgcm.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
 		return nil, err

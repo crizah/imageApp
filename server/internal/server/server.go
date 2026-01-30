@@ -25,12 +25,6 @@ type Server struct {
 	userPoolClientId string
 }
 
-var AllowedOrigin = map[string]bool{
-	os.Getenv("CLIENT_IP"):  true,
-	"http://localhost:3000": true,
-	"http://localhost:5173": true,
-}
-
 func InitialiseServer() (*Server, error) {
 	awsRegion := os.Getenv("AWS_REGION")
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
@@ -65,13 +59,11 @@ func InitialiseServer() (*Server, error) {
 func (s *Server) AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		origin := r.Header.Get("Origin")
+		// origin := r.Header.Get("Origin")
 		// EnableCors(w, r, origin)
 
-		if AllowedOrigin[origin] {
-			w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 
-		}
 		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		w.Header().Set("Content-Type", "application/json")
@@ -107,11 +99,8 @@ func (s *Server) AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 func (s *Server) CheckAuthHandler(w http.ResponseWriter, r *http.Request) {
 	// get
 
-	origin := r.Header.Get("Origin")
-	if AllowedOrigin[origin] {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	}
 	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 	w.Header().Set("Content-Type", "application/json")
@@ -136,7 +125,7 @@ func (s *Server) CheckAuthHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify token
+	//verify token
 	userInfo, err := s.cognitoClient.GetUser(context.TODO(), &cognitoidentityprovider.GetUserInput{
 		AccessToken: aws.String(cookie.Value),
 	})

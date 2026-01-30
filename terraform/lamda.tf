@@ -4,27 +4,27 @@ module "lambda_function_existing_package_local" {
   source = "terraform-aws-modules/lambda/aws"
 
   function_name = "signUpTrigger"
-  description   = "Create SNS topic, subscribe email, add to dynamodb"
+  description   = "create SNS topic, subscribe email, add to dynamodb"
   handler       = "trigger.handler"
   runtime       = "python3.10"
-  timeout = 30 // cuz sns might take time
+  timeout = 30 //snstaking  time
 
   create_package         = false
   local_existing_package = "${path.module}/lamda/signUpTrigger.zip"
 
-  # Lambda needs permission to be invoked by Cognito
+  # lambda needs permission to be accessed cognito
   attach_policy_statements = true
   policy_statements = {
     dynamodb = {
       effect = "Allow"
-      actions = [ // adds username and email to Users table (depends on dynamo.tf)
+      actions = [ 
         "dynamodb:PutItem",
         "dynamodb:GetItem",
         "dynamodb:UpdateItem"
       ]
       resources = [aws_dynamodb_table.users.arn] 
     }
-    sns = {  // create sns topic for user and subscribes email 
+    sns = {  
       effect = "Allow"
       actions = [
         "sns:Subscribe",
@@ -47,7 +47,7 @@ module "lambda_function_existing_package_local" {
 
 
 
-# cognito function permission to invoke lamda upon sign up
+# cognito permission for lamda 
 resource "aws_lambda_permission" "allow_cognito" {
   statement_id  = "AllowExecutionFromCognito"
   action        = "lambda:InvokeFunction"

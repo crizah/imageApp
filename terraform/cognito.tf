@@ -1,9 +1,7 @@
 resource "aws_cognito_user_pool" "user_pool" {
   name = "user-pool"
 
-#   username_attributes = ["email"] // this does that anyways 
-#   alias_attributes = ["preferred_username"] // allows foir login with username as well as email
-   alias_attributes = ["email", "preferred_username"]
+   alias_attributes = ["email", "preferred_username"] // allows foir login with username as well as email
   auto_verified_attributes = ["email"]
 
   password_policy {
@@ -15,9 +13,7 @@ resource "aws_cognito_user_pool" "user_pool" {
     email_subject = "Account Confirmation"
     email_message = "This is your verification code: {####}"
   }
-#   email_configuration {
-#     email_sending_account = "COGNITO_DEFAULT" 
-#   }
+
 
   schema {
     attribute_data_type      = "String"
@@ -50,7 +46,7 @@ resource "aws_cognito_user_pool" "user_pool" {
     post_confirmation = module.lambda_function_existing_package_local.lambda_function_arn
     }
 
-    # Account recovery
+    # recovery
   account_recovery_setting {
     recovery_mechanism {
       name     = "verified_email"
@@ -74,9 +70,9 @@ resource "aws_cognito_user_pool_client" "client" {
   ]
 
 
-  # Token validity
-  access_token_validity  = 60   # minutes
-  id_token_validity      = 60   # minutes
+  # validity
+  access_token_validity  = 60   
+  id_token_validity      = 60  
   token_validity_units {
     access_token  = "minutes"
     id_token      = "minutes"
@@ -84,7 +80,7 @@ resource "aws_cognito_user_pool_client" "client" {
   }
 
 
-  # Read/write attributes
+  # read/write attributes
   read_attributes = [
     "email",
     "email_verified",
@@ -97,12 +93,6 @@ resource "aws_cognito_user_pool_client" "client" {
   ]
 
 }
-
-
-# resource "aws_cognito_user_pool_domain" "cognito-domain" {
-#   domain       = "meow.auth.${var.region}.amazoncognito.com"
-#   user_pool_id = "${aws_cognito_user_pool.user_pool.id}"
-# }
 
 
 output "user_pool_id" {

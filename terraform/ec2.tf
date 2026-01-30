@@ -61,11 +61,18 @@ resource "aws_security_group" "app_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+   ingress {
+    from_port   = 3000
+    to_port     = 3000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["${var.ur_ip}/32"]  # Restrict SSH to your IP
+    cidr_blocks = ["${var.ur_ip}/32"]  # SSH to your ip
   }
 
   egress {
@@ -76,13 +83,13 @@ resource "aws_security_group" "app_sg" {
   }
 }
 
-# EC2 instance
+
 resource "aws_instance" "app_server" {
   ami                    = "ami-0b6c6ebed2801a5cb"
   instance_type          = "t3.micro" 
   iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name
   vpc_security_group_ids = [aws_security_group.app_sg.id]
-  key_name               = var.ssh_key  # Create this in AWS Console
+  key_name               = var.ssh_key  
 
   user_data = <<-EOF
                                
@@ -126,7 +133,7 @@ resource "aws_instance" "app_server" {
               # create the .env file
 
                
-              PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
+              
               cat > .env << 'ENVEOF'
               USER_POOL_CLIENT_ID=${aws_cognito_user_pool_client.client.id}
               USER_POOL_ID=${aws_cognito_user_pool.user_pool.id}
@@ -134,7 +141,6 @@ resource "aws_instance" "app_server" {
               SECURE=${var.sec}
               WITH_INGRESS=${var.ingress}
               BUCKET_NAME=${var.bucketName}
-              CLIENT_IP=http://$PUBLIC_IP:3000
               BACKEND_URL=http://backend:8082
               ENVEOF
 
@@ -150,7 +156,7 @@ resource "aws_instance" "app_server" {
   }
 }
 
-# Elastic IP (static public IP)
+
 resource "aws_eip" "app_eip" {
   instance = aws_instance.app_server.id
 }

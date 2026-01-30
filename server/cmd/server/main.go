@@ -11,9 +11,9 @@ import (
 	"github.com/joho/godotenv"
 )
 
-type MsgRequest struct {
-	MessageID string `json:"messageID"`
-}
+// type MsgRequest struct {
+// 	MessageID string `json:"messageID"`
+// }
 
 func main() {
 	godotenv.Load()
@@ -37,6 +37,6 @@ func main() {
 	mux.HandleFunc(fmt.Sprintf("%s/files", x), s.AuthMiddleware(s.FileHandler))          // works
 	mux.HandleFunc(fmt.Sprintf("%s/logout", x), s.AuthMiddleware(s.LogoutHandler))       // DOES NOT WORK but i kinda dont care actually
 
-	fmt.Println("Server starting on :8082")
+	fmt.Println("server starting on :8082")
 	http.ListenAndServe(":8082", mux)
 }

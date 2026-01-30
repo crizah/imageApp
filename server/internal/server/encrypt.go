@@ -27,18 +27,16 @@ type SendMessageRequest struct {
 func (s *Server) SendMsg(sender string, receiver string, fileName string, filePath string, msgID string) error {
 	BUCKET := os.Getenv("BUCKET_NAME")
 
-	// get the recipients kms key from dynamo Table
-
 	snsTopicARN, err := s.getRecipientARN(receiver)
 	if err != nil {
 		return err
 	}
 
 	// generate ranbdim dek
-	dataKey := make([]byte, 32) // 256-bit key
+	dataKey := make([]byte, 32)
 	rand.Read(dataKey)
 
-	// 3. Encrypt the image with the data key (AES-256)
+	// encrypt w dk
 
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -54,13 +52,10 @@ func (s *Server) SendMsg(sender string, receiver string, fileName string, filePa
 
 	imageBytes := buf.Bytes()
 
-	// imageBytes, _ := base64.StdEncoding.DecodeString(buf)
 	encryptedImage, err := encryptAES(imageBytes, dataKey)
 	if err != nil {
 		return err
 	}
-
-	// 4. Encrypt the data key with recipient's KMS key
 
 	encryptedDK, err := s.encryptDataKey(dataKey)
 	if err != nil {
@@ -86,11 +81,8 @@ func (s *Server) SendMsg(sender string, receiver string, fileName string, filePa
 
 		return err
 	}
-
-	// 7. Send SNS notification to recipient
+	// SNS notification to recipient
 	err = s.sendSNS(sender, snsTopicARN)
-
-	// send notification to frontend of the receiver
 
 	return err
 
@@ -154,11 +146,6 @@ func (s *Server) getRecipientARN(username string) (string, error) {
 }
 
 func encryptAES(data []byte, key []byte) ([]byte, error) {
-	// Implement AES-256-GCM encryption
-	// ... encryption logic ...
-
-	// The key argument should be the AES key, either 16 or 32 bytes
-	// to select AES-128 or AES-256.
 
 	var result []byte
 	block, err := aes.NewCipher(key)
@@ -166,7 +153,6 @@ func encryptAES(data []byte, key []byte) ([]byte, error) {
 		return result, err
 	}
 
-	// Never use more than 2^32 random nonces with a given key because of the risk of a repeat.
 	nonce := make([]byte, 12)
 	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
 		return result, err

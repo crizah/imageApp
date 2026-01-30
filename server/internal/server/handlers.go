@@ -7,20 +7,17 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"strings"
 )
 
-var allowedOrigin = map[string]bool{
-	os.Getenv("CLIENT_IP"):  true,
-	"http://localhost:3000": true,
-	"http://localhost:5173": true,
-}
+// var allowedOrigin = map[string]bool{
+// 	os.Getenv("CLIENT_IP"):  true,
+// 	"http://localhost:3000": true,
+// 	"http://localhost:5173": true,
+// }
 
 func EnableCors(w http.ResponseWriter, r *http.Request, origin string) {
-	if allowedOrigin[origin] {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
 
-	}
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
@@ -51,16 +48,8 @@ func (s *Server) SignUpHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewDecoder(r.Body).Decode(&req)
 	res, err := s.CallCognito(req.Username, req.Password, req.Email)
 	if err != nil {
-		// Handle specific Cognito errors
-		if strings.Contains(err.Error(), "UsernameExistsException") {
-			http.Error(w, "Username or email already exists", http.StatusConflict)
-			return
-		}
-		if strings.Contains(err.Error(), "InvalidPasswordException") {
-			http.Error(w, "Password does not meet requirements", http.StatusBadRequest)
-			return
-		}
-		http.Error(w, "Signup failed: "+err.Error(), http.StatusInternalServerError)
+
+		http.Error(w, "error "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -210,8 +199,6 @@ func (s *Server) NotificationHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("Receiver:", receiver.Username)
-
 	// query messages db to get the unread messages and return count to send back to frontend
 
 	count, err := s.QueryForCount(receiver.Username)
@@ -315,14 +302,12 @@ func (s *Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse multipart form (10 MB max)
 	err := r.ParseMultipartForm(10 << 20)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Get file from request
 	file, header, err := r.FormFile("file")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -330,19 +315,12 @@ func (s *Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	// Get recipient and sender
 	recipient := r.FormValue("recipient")
 	sender := r.FormValue("sender")
 	msgID := r.FormValue("msgID")
 
 	fmt.Printf("Received file: %s for recipient: %s by sender: %s\n", header.Filename, recipient, sender)
 
-	// Save file temporarily
-	// err = os.Mkdir("uploads", os.ModePerm)
-	// if err != nil {
-	// 	http.Error(w, "cpuldnt create dir"+err.Error(), http.StatusInternalServerError)
-	// 	return
-	// }
 	filepath := "./uploads/" + header.Filename
 	dst, err := os.Create(filepath)
 	if err != nil {
@@ -351,10 +329,10 @@ func (s *Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err = io.Copy(dst, file)
-	dst.Close() // Close immediately after writing
+	dst.Close()
 
 	if err != nil {
-		os.Remove(filepath) // Clean up on error
+		os.Remove(filepath)
 		http.Error(w, "Failed to save file", http.StatusInternalServerError)
 		return
 	}
@@ -365,11 +343,11 @@ func (s *Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Delete local file after successful S3 upload
+	// del local file after  S3 upload
 	err = os.Remove(filepath)
 	if err != nil {
 		fmt.Println("Warning: Could not delete local file:", err)
-		// Don't fail the request if cleanup fails
+
 	}
 
 	w.Header().Set("Content-Type", "application/json")
