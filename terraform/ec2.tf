@@ -1,6 +1,3 @@
-
-
-# IAM Role for EC2 to access AWS services
 resource "aws_iam_role" "ec2_role" {
   name = "chat-app-ec2-role"
 
@@ -85,7 +82,7 @@ resource "aws_security_group" "app_sg" {
 
 
 resource "aws_instance" "app_server" {
-  ami                    = "ami-0b6c6ebed2801a5cb"
+  ami                    = "ami-0b6c6ebed2801a5cb" 
   instance_type          = "t3.micro" 
   iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name
   vpc_security_group_ids = [aws_security_group.app_sg.id]
@@ -105,29 +102,31 @@ resource "aws_instance" "app_server" {
                     gnupg \
                     lsb-release \
                     git
-              sudo apt install apt-transport-https ca-certificates curl software-properties-common
+              # sudo apt install apt-transport-https ca-certificates curl software-properties-common
 
-              curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+              # curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 
-              sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable"
+              # sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable"
 
-              sudo apt update
+              # sudo apt update
 
-              sudo apt install docker-ce
+              # sudo apt install docker-ce
+
+              sudo snap install docker
 
         
 
               # docker compose
 
-              sudo curl -L "https://github.com/docker/compose/releases/download/1.28.5/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-              sudo chmod +x /usr/local/bin/docker-compose
+              # sudo curl -L "https://github.com/docker/compose/releases/download/1.28.5/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+              # sudo chmod +x /usr/local/bin/docker-compose
 
 
               cd /home/ubuntu
 
               # clone
 
-              git clone  https://github.com/crizah/imageApp.git
+              git clone https://github.com/crizah/imageApp.git
               cd imageApp
 
               # create the .env file
@@ -142,6 +141,9 @@ resource "aws_instance" "app_server" {
               WITH_INGRESS=${var.ingress}
               BUCKET_NAME=${var.bucketName}
               BACKEND_URL=http://backend:8082
+              AWS_ACCESS_KEY_ID=${var.access_key_id}
+              AWS_SECRET_ACCESS_KEY=${var.access_key}
+
               ENVEOF
 
               # run docker compose in backgroung

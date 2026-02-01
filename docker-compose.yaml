@@ -1,8 +1,7 @@
 version: "3.9"
-
 services:
   backend:
-    build: ./server
+    image:   shaizah/kube:imageApp-server
     ports:
       - "8082:8082"
     environment:
@@ -18,7 +17,7 @@ services:
       WITH_INGRESS: ${WITH_INGRESS}
 
   frontend:
-    build: ./web
+    image:    shaizah/kube:imageApp-web
     ports:
       - "3000:80"
     environment:

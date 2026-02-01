@@ -55,3 +55,15 @@ variable "ur_ip"{
     type = string
     description = "ur ip address"
 }
+
+variable "access_key_id" {
+    type= string
+    description = "aws access key id"
+  
+}
+
+variable "access_key" {
+    type = string
+    description = "aws access key"
+  
+}
