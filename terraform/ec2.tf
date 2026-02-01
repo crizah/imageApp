@@ -124,14 +124,14 @@ resource "aws_instance" "app_server" {
 
               cd /home/ubuntu
 
+              git clone https://github.com/crizah/imageApp-ec2.git
+              cd imageApp-ec2
+
+
               # clone
 
-              git clone https://github.com/crizah/imageApp.git
-              cd imageApp
-
-              # create the .env file
-
-               
+              # git clone https://github.com/crizah/imageApp.git
+              # cd imageApp
               
               cat > .env << 'ENVEOF'
               USER_POOL_CLIENT_ID=${aws_cognito_user_pool_client.client.id}
@@ -140,7 +140,7 @@ resource "aws_instance" "app_server" {
               SECURE=${var.sec}
               WITH_INGRESS=${var.ingress}
               BUCKET_NAME=${var.bucketName}
-              BACKEND_URL=http://backend:8082
+              BACKEND_URL=http://localhost:8082
               AWS_ACCESS_KEY_ID=${var.access_key_id}
               AWS_SECRET_ACCESS_KEY=${var.access_key}
 
