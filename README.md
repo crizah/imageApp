@@ -55,7 +55,7 @@ All the AWS services used:
 All AWS resources are provisioned using **Terraform** :
 * All the AWS resources are defined in .tf files
 * Terraform makes all the required infrastructure (Dynamo tables S3 buckets, cognito userpools, lamda functions) and makes and attatches the required iam roles and policies.
-* Terraform makes an EC2 instance, installs the dependencies, clones the repo inside it and runs it with docker compose.
+* Terraform makes an EC2 instance, configures it, clones the repo inside it and runs it with docker compose.
 
 ---
 
@@ -135,12 +135,16 @@ edit the `terraform.tfvars` file at `./terraform/terraform.tfvars`:
 ```hcl
 ssh_key    = "your-ec2-keypair-name"
 ur_ip      = "YOUR_PUBLIC_IP"
+access_key_id = "" # add your aws access key id here
+access_key =  "" # add your aws access key here
+
 ```
 
 **Notes:**
 
 * `ssh_key` must match an EC2 key pair already created in AWS
 * `ur_ip` should be **your public IP**, used to restrict SSH access (`/32`)
+* Make sure the user u choose has the appropriate permissions
 
 ---
 
@@ -163,21 +167,23 @@ Terraform will:
 Once complete, Terraform outputs the application URL.
 The app can be access via port `3000` of the public ip
 
+Note: This might take upto 10mins after running terraform apply as the instance used is not the most powerful thing out there
+
 ---
 
 ## Local Development (Docker)
 
-Pull the remote docker images
+Clone the repo with the docker compose
 
 ```bash
-docker pull shaizah/kube:imageApp-server
-docker pull shaizah/kube:imageApp-web
+docker pull shaizah/kube:imageApp-server-local
+docker pull shaizah/kube:imageApp-web-local
 ```
-Run the images
+Make a .env file
 
 ```bash
-docker run -d -p 8082:8082 shaizah/kube:imageApp-server
-docker run -d -p 3000:80 -e BACKEND_URL=http://localhost:8082 shaizah/kube:imageApp-web
+docker run -d -p 8082:8082 shaizah/kube:imageApp-server-local
+docker run -d -p 3000:80 -e BACKEND_URL=http://localhost:8082 shaizah/kube:imageApp-web-local
 ```
 
 Frontend will be available at:

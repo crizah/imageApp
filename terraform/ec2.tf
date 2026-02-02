@@ -68,7 +68,7 @@ resource "aws_security_group" "app_sg" {
   ingress {
     from_port = 8082
     to_port = 8082
-    protocol = tcp
+    protocol = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
@@ -101,18 +101,12 @@ resource "aws_instance" "app_server" {
   user_data = <<-EOF
                                
               #!/bin/bash
-
-              
-             
               sudo apt update 
               cd /home/ubuntu
-  
               sudo apt install git
               sudo apt install curl
-
-              sudo snap install docker 
-
-
+              TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600" 2>/dev/null)
+              PUBLIC_IP=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/public-ipv4)
               git clone https://github.com/crizah/imageApp-ec2.git
               cd imageApp-ec2
 
@@ -123,15 +117,36 @@ resource "aws_instance" "app_server" {
               SECURE=${var.sec}
               WITH_INGRESS=${var.ingress}
               BUCKET_NAME=${var.bucketName}
-              BACKEND_URL=http://${aws_eip.app_eip.public_ip}:8082
-              CLIENT_IP=http://${aws_eip.app_eip.public_ip}:3000
+              BACKEND_URL=http://$PUBLIC_IP:8082
+              CLIENT_IP=http://$PUBLIC_IP:3000
               AWS_ACCESS_KEY_ID=${var.access_key_id}
               AWS_SECRET_ACCESS_KEY=${var.access_key}
 
               ENVEOF
+              
+               
+               sudo apt install -y ca-certificates curl gnupg
+               sudo install -m 0755 -d /etc/apt/keyrings
+              curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+              sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
+              echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
 
-              sudo docker compose up --build
+
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+
+sudo usermod -aG docker ubuntu
+
+sudo docker up --build -d
+
+              
+
               EOF
   tags = {
     Name = "imageApp"
@@ -142,6 +157,9 @@ resource "aws_instance" "app_server" {
 resource "aws_eip" "app_eip" {
   instance = aws_instance.app_server.id
 }
+
+
+
 
 output "public_ip" {
   value = aws_eip.app_eip.public_ip
