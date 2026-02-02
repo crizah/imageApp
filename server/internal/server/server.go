@@ -59,8 +59,8 @@ func InitialiseServer() (*Server, error) {
 func (s *Server) AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		// origin := r.Header.Get("Origin")
-		// EnableCors(w, r, origin)
+		origin := r.Header.Get("Origin")
+		EnableCors(w, r, origin)
 
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 
@@ -99,7 +99,8 @@ func (s *Server) AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 func (s *Server) CheckAuthHandler(w http.ResponseWriter, r *http.Request) {
 	// get
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	origin := r.Header.Get("Origin")
+	EnableCors(w, r, origin)
 
 	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")

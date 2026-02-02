@@ -9,15 +9,17 @@ import (
 	"os"
 )
 
-// var allowedOrigin = map[string]bool{
-// 	os.Getenv("CLIENT_IP"):  true,
-// 	"http://localhost:3000": true,
-// 	"http://localhost:5173": true,
-// }
+var allowedOrigin = map[string]bool{
+	os.Getenv("CLIENT_IP"):  true,
+	"http://localhost:3000": true,
+	"http://localhost:5173": true,
+}
 
 func EnableCors(w http.ResponseWriter, r *http.Request, origin string) {
+	if allowedOrigin[origin] {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	}
 
 	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")

@@ -66,10 +66,17 @@ resource "aws_security_group" "app_sg" {
   }
 
   ingress {
+    from_port = 8082
+    to_port = 8082
+    protocol = tcp
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["${var.ur_ip}/32"]  # SSH to your ip
+    cidr_blocks = ["${var.ur_ip}/32"]  
   }
 
   egress {
@@ -88,51 +95,27 @@ resource "aws_instance" "app_server" {
   vpc_security_group_ids = [aws_security_group.app_sg.id]
   key_name               = var.ssh_key  
 
+  
+
+
   user_data = <<-EOF
                                
               #!/bin/bash
-              set -e
-              # install docker and coker compose
-              sudo apt-get update
-              sudo apt-get upgrade
 
-              sudo apt-get install \
-                    ca-certificates \
-                    curl \
-                    gnupg \
-                    lsb-release \
-                    git
-              # sudo apt install apt-transport-https ca-certificates curl software-properties-common
-
-              # curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-
-              # sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable"
-
-              # sudo apt update
-
-              # sudo apt install docker-ce
-
-              sudo snap install docker
-
-        
-
-              # docker compose
-
-              # sudo curl -L "https://github.com/docker/compose/releases/download/1.28.5/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-              # sudo chmod +x /usr/local/bin/docker-compose
-
-
+              
+             
+              sudo apt update 
               cd /home/ubuntu
+  
+              sudo apt install git
+              sudo apt install curl
+
+              sudo snap install docker 
+
 
               git clone https://github.com/crizah/imageApp-ec2.git
               cd imageApp-ec2
 
-
-              # clone
-
-              # git clone https://github.com/crizah/imageApp.git
-              # cd imageApp
-              
               cat > .env << 'ENVEOF'
               USER_POOL_CLIENT_ID=${aws_cognito_user_pool_client.client.id}
               USER_POOL_ID=${aws_cognito_user_pool.user_pool.id}
@@ -140,19 +123,16 @@ resource "aws_instance" "app_server" {
               SECURE=${var.sec}
               WITH_INGRESS=${var.ingress}
               BUCKET_NAME=${var.bucketName}
-              BACKEND_URL=http://localhost:8082
+              BACKEND_URL=http://${aws_eip.app_eip.public_ip}:8082
+              CLIENT_IP=http://${aws_eip.app_eip.public_ip}:3000
               AWS_ACCESS_KEY_ID=${var.access_key_id}
               AWS_SECRET_ACCESS_KEY=${var.access_key}
 
               ENVEOF
 
-              # run docker compose in backgroung
 
-              docker compose up --build
+              sudo docker compose up --build
               EOF
-
-
-
   tags = {
     Name = "imageApp"
   }
@@ -168,5 +148,5 @@ output "public_ip" {
 }
 
 output "app_url" {
-  value = "http://${aws_eip.app_eip.public_ip}"
+  value = "http://${aws_eip.app_eip.public_ip}:3000"
 }
